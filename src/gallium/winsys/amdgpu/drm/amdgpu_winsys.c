@@ -373,7 +373,7 @@ are_file_descriptions_equal(int fd1, int fd2)
       static bool logged;
 
       if (!logged) {
-         os_log_message("amdgpu: os_same_file_description couldn't "
+         debug_printf("amdgpu: os_same_file_description couldn't "
                         "determine if two DRM fds reference the same "
                         "file description.\n"
                         "If they do, bad things may happen!\n");
