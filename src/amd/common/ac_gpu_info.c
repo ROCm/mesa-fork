@@ -79,6 +79,7 @@ static uint64_t fix_vram_size(uint64_t size)
 
 static void set_custom_cu_en_mask(struct radeon_info *info)
 {
+#ifndef AMD_DECODE_ONLY
    info->spi_cu_en = ~0;
 
    const char *cu_env_var = os_get_option("AMD_CU_MASK");
@@ -221,8 +222,10 @@ static void set_custom_cu_en_mask(struct radeon_info *info)
          info->spi_cu_en_has_effect = spi_cu_en & BITFIELD_MASK(info->max_good_cu_per_sa);
       }
    }
+#endif
 }
 
+#ifndef AMD_DECODE_ONLY
 static bool handle_env_var_force_family(struct radeon_info *info)
 {
    const char *family = debug_get_option("AMD_FORCE_FAMILY", NULL);
@@ -232,6 +235,7 @@ static bool handle_env_var_force_family(struct radeon_info *info)
 
    return true;
 }
+#endif
 
 void
 ac_fill_cu_info(struct radeon_info *info, struct drm_amdgpu_info_device *device_info)
@@ -340,9 +344,11 @@ ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
    struct drm_amdgpu_info_device device_info = {0};
    uint32_t vidip_fw_version = 0, vidip_fw_feature = 0;
    uint32_t num_instances = 0;
-   int r, i, j;
+   int r;
    ac_drm_device *dev = dev_p;
-
+#ifndef AMD_DECODE_ONLY
+   int i, j;
+#endif
    STATIC_ASSERT(AMDGPU_HW_IP_GFX == AMD_IP_GFX);
    STATIC_ASSERT(AMDGPU_HW_IP_COMPUTE == AMD_IP_COMPUTE);
    STATIC_ASSERT(AMDGPU_HW_IP_DMA == AMD_IP_SDMA);
@@ -354,10 +360,12 @@ ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
    STATIC_ASSERT(AMDGPU_HW_IP_VCN_JPEG == AMD_IP_VCN_JPEG);
    STATIC_ASSERT(AMDGPU_HW_IP_VPE == AMD_IP_VPE);
 
+#ifndef AMD_DECODE_ONLY
    if (!handle_env_var_force_family(info)) {
       fprintf(stderr, "amdgpu: handle_env_var_force_family failed.\n");
       return AC_QUERY_GPU_INFO_UNIMPLEMENTED_HW;
    }
+#endif
 
    info->pci.valid = ac_drm_query_pci_bus_info(dev, info) == 0;
    if (require_pci_bus_info && !info->pci.valid) {
@@ -858,7 +866,7 @@ ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
       fprintf(stderr, "amdgpu: clock crystal frequency is 0, timestamps will be wrong\n");
       info->clock_crystal_freq = 1;
    }
-
+#ifndef AMD_DECODE_ONLY
    if (info->gfx_level >= GFX10) {
       info->tcc_cache_line_size = info->gfx_level >= GFX12 ? 256 : 128;
       info->num_tcc_blocks = info->max_tcc_blocks - util_bitcount64(device_info.tcc_disabled_mask);
@@ -1256,9 +1264,10 @@ ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
 
    memcpy(info->cik_macrotile_mode_array, amdinfo.gb_macro_tile_mode,
           sizeof(amdinfo.gb_macro_tile_mode));
-
+#endif
    info->pte_fragment_size = device_info.pte_fragment_size;
    info->gart_page_size = device_info.gart_page_size;
+#ifndef AMD_DECODE_ONLY
 
    info->gfx_ib_pad_with_type2 = info->gfx_level == GFX6;
 
@@ -1672,6 +1681,7 @@ ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
          exit(0);
       }
    }
+#endif // AMD_DECODE_ONLY
    return AC_QUERY_GPU_INFO_SUCCESS;
 }
 
