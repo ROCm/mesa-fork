@@ -260,6 +260,7 @@ vlVaPutSubpictures(vlVaSurface *surf, vlVaDriver *drv,
                    struct pipe_surface *surf_draw, struct u_rect *dirty_area,
                    struct u_rect *src_rect, struct u_rect *dst_rect)
 {
+#ifndef AMD_DECODE_ONLY
    vlVaSubpicture *sub;
    int i;
 
@@ -339,7 +340,7 @@ vlVaPutSubpictures(vlVaSurface *surf, vlVaDriver *drv,
       if (blend_state)
          drv->pipe->delete_blend_state(drv->pipe, blend_state);
    }
-
+#endif
    return VA_STATUS_SUCCESS;
 }
 
@@ -349,6 +350,7 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
                unsigned short destw, unsigned short desth, VARectangle *cliprects,
                unsigned int number_cliprects,  unsigned int flags)
 {
+#ifndef AMD_DECODE_ONLY
    vlVaDriver *drv;
    vlVaSurface *surf;
    struct pipe_screen *screen;
@@ -444,7 +446,7 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
 
    pipe_resource_reference(&tex, NULL);
    mtx_unlock(&drv->mutex);
-
+#endif
    return VA_STATUS_SUCCESS;
 }
 
@@ -948,17 +950,20 @@ vlVaHandleSurfaceAllocate(vlVaDriver *drv, vlVaSurface *surface,
 {
    struct pipe_surface *surfaces;
    unsigned i;
-
+#ifndef AMD_DECODE_ONLY
    if (modifiers_count > 0) {
+#endif
       if (!drv->pipe->create_video_buffer_with_modifiers)
          return VA_STATUS_ERROR_ATTR_NOT_SUPPORTED;
       surface->buffer =
          drv->pipe->create_video_buffer_with_modifiers(drv->pipe, templat,
                                                        modifiers,
                                                        modifiers_count);
+#ifndef AMD_DECODE_ONLY
    } else {
       surface->buffer = drv->pipe->create_video_buffer(drv->pipe, templat);
    }
+#endif
    if (!surface->buffer)
       return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
@@ -1023,13 +1028,14 @@ vlVaSwitchToProtectedContext(vlVaDriver *drv)
 
    drv->pipe2 = drv->pipe;
    drv->pipe = ctx;
-
+#ifndef AMD_DECODE_ONLY
    if (drv->cstate.pipe) {
       vl_compositor_cleanup_state(&drv->cstate);
       vl_compositor_cleanup(&drv->compositor);
       vl_compositor_init(&drv->compositor, drv->pipe, false);
       vl_compositor_init_state(&drv->cstate, drv->pipe);
    }
+#endif
 }
 
 static int

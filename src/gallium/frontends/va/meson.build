@@ -3,15 +3,33 @@
 
 libva_version = dep_va.version().split('.')
 
+if with_amd_decode_only
+  libva_version = ['1', '0']
+endif
+
+libva_files = [
+    'buffer.c', 'config.c', 'context.c', 'display.c', 'picture.c',
+    'picture_h264.c', 'picture_hevc.c',
+    'picture_mjpeg.c', 'picture_vp9.c','picture_av1.c',
+    'surface.c',
+    'decode.c'
+]
+
+if with_amd_decode_only
+  libva_files += ['decode_stub.c']
+else
+  libva_files += [
+    'picture_mpeg12.c', 'picture_mpeg4.c', 'image.c',
+    'postproc.c',
+    'picture_h264_enc.c', 'picture_hevc_enc.c',
+    'subpicture.c',
+    'picture_av1_enc.c', 'encode.c'
+  ]
+endif
+
 libva_st = static_library(
   'va_st',
-  files(
-    'buffer.c', 'config.c', 'context.c', 'display.c', 'image.c', 'picture.c',
-    'picture_mpeg12.c', 'picture_mpeg4.c', 'picture_h264.c', 'picture_hevc.c',
-    'picture_vc1.c', 'picture_mjpeg.c', 'picture_vp9.c','picture_av1.c','postproc.c',
-    'subpicture.c', 'surface.c', 'picture_h264_enc.c', 'picture_hevc_enc.c',
-    'picture_av1_enc.c', 'encode.c', 'decode.c',
-  ),
+  files(libva_files),
   c_args : [
     '-DVA_DRIVER_INIT_FUNC=__vaDriverInit_@0@_@1@'.format(
       libva_version[0], libva_version[1]
