@@ -17,6 +17,8 @@ project(
   ],
 )
 
+with_amd_decode_only = get_option('amd-decode-only')
+
 if host_machine.system() == 'darwin'
   add_languages('objc', native : false)
   libname_prefix = 'lib'
@@ -43,6 +45,10 @@ endif
 
 with_llvm = get_option('llvm')
 amd_with_llvm = get_option('amd-use-llvm')
+
+if with_amd_decode_only
+  amd_with_llvm = false
+endif
 
 with_mesa_debug = get_option('buildtype') == 'debug'
 
@@ -87,6 +93,10 @@ c_cpp_args = []
 c_args = []
 cpp_args = []
 
+if with_amd_decode_only
+  pre_args += '-DAMD_DECODE_ONLY'
+endif
+
 with_moltenvk_dir = get_option('moltenvk-dir')
 with_vulkan_icd_dir = get_option('vulkan-icd-dir')
 with_tests = get_option('build-tests')
@@ -118,6 +128,9 @@ if with_tools.contains('all')
     'panfrost',
     'zink',
   ]
+endif
+if with_amd_decode_only
+  with_tools = []
 endif
 
 with_any_vulkan_layers = get_option('vulkan-layers').length() != 0
@@ -188,6 +201,9 @@ elif gallium_drivers.contains('all')
      'nouveau', 'svga', 'tegra', 'virgl', 'lima', 'panfrost', 'llvmpipe', 'softpipe', 'iris',
      'zink', 'd3d12', 'asahi', 'rocket', 'ethosu'
    ]
+endif
+if with_amd_decode_only
+  gallium_drivers = []
 endif
 
 with_amdgpu_virtio = get_option('amdgpu-virtio')
@@ -272,6 +288,9 @@ elif _vulkan_drivers.contains('all')
                       'freedreno', 'panfrost', 'virtio', 'broadcom',
                       'imagination', 'microsoft-experimental',
                       'nouveau', 'asahi', 'gfxstream', 'kosmickrisp']
+endif
+if with_amd_decode_only
+  _vulkan_drivers = []
 endif
 
 with_intel_vk = _vulkan_drivers.contains('intel')
@@ -407,6 +426,11 @@ if _codecs.contains('all')
 elif _codecs.contains('all_free')
   _codecs += free_codecs
 endif
+
+if with_amd_decode_only
+  _codecs = ['av1dec', 'vp9dec', 'h264dec', 'h265dec']
+endif
+
 foreach c : all_codecs
    pre_args += '-DVIDEO_CODEC_@0@=@1@'.format(c.to_upper(), _codecs.contains(c).to_int())
 endforeach
@@ -427,6 +451,9 @@ if _platforms.contains('auto')
     error('Unknown OS @0@. Please pass -Dplatforms to set platforms. Patches gladly accepted to fix this.'.format(
           host_machine.system()))
   endif
+endif
+if with_amd_decode_only
+  _platforms = []
 endif
 
 with_platform_android = _platforms.contains('android')
@@ -464,6 +491,9 @@ if with_glx == 'dri'
    if with_gallium
       with_dri = true
    endif
+endif
+if with_amd_decode_only
+  with_glx = 'disabled'
 endif
 
 if not with_opengl and with_glx != 'disabled'
@@ -676,8 +706,11 @@ _va_drivers = [
 ]
 
 _va = get_option('gallium-va') \
-  .require(_va_drivers.contains(true),
+  .require(_va_drivers.contains(true) or with_amd_decode_only,
            error_message : 'VA state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau, d3d12 (with option gallium-d3d12-video), virgl.')
+if with_amd_decode_only
+  _va = true
+endif
 _dep_va_name = host_machine.system() == 'windows' ? 'libva-win32' : 'libva'
 dep_va = dependency(_dep_va_name, version : '>= 1.8.0', required : _va)
 if dep_va.found()
@@ -747,6 +780,9 @@ endif
 _rtti = get_option('cpp_rtti')
 
 with_gallium_rusticl = get_option('gallium-rusticl')
+if with_amd_decode_only
+  with_gallium_rusticl = false
+endif
 if with_gallium_rusticl
   if not with_gallium
     error('rusticl requires at least one gallium driver.')
@@ -843,9 +879,15 @@ else
              with_microsoft_clc or with_gallium_rusticl or \
              with_drivers_clc or with_driver_using_cl
 endif
+if with_amd_decode_only
+  with_clc = false
+endif
 
 with_llvm = with_llvm \
   .enable_if(with_clc, error_message : 'CLC requires LLVM')
+if with_amd_decode_only
+  with_llvm = false
+endif
 
 with_poly = [
   with_gallium_asahi, with_asahi_vk, with_tools.contains('asahi'),
@@ -1678,7 +1720,7 @@ _drm_ver = '2.4.109'
 
 _libdrm_checks = [
   ['intel', with_gallium_i915],
-  ['amdgpu', (with_amd_vk and not with_platform_windows) or with_gallium_radeonsi],
+  ['amdgpu', (with_amd_vk and not with_platform_windows) or with_gallium_radeonsi or with_amd_decode_only],
 ]
 
 # Loop over the enables versions and get the highest libdrm requirement for all
@@ -1734,7 +1776,6 @@ dep_libudev = dependency('libudev', required : false)
 if dep_libudev.found()
   pre_args += '-DHAVE_LIBUDEV'
 endif
-
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit', 'core', 'executionengine', 'scalaropts', 'transformutils', 'instcombine']
 llvm_optional_modules = ['coroutines']
 if with_amd_vk or with_gallium_radeonsi or with_gallium_r600
@@ -1751,6 +1792,9 @@ if with_clc
   llvm_optional_modules += ['all-targets', 'windowsdriver', 'frontendhlsl', 'frontenddriver']
 endif
 draw_with_llvm = get_option('draw-use-llvm')
+if with_amd_decode_only
+  draw_with_llvm = false
+endif
 if draw_with_llvm
   llvm_modules += 'native'
   # lto is needded with LLVM>=15, but we don't know what LLVM verrsion we are using yet
@@ -1786,7 +1830,7 @@ dep_llvm = dependency(
   fallback : ['llvm', 'dep_llvm'],
   include_type : 'system',
 )
-if dep_llvm.found()
+if dep_llvm.found() and not with_amd_decode_only
   pre_args += '-DMESA_LLVM_VERSION_STRING="@0@"'.format(dep_llvm.version())
   pre_args += '-DLLVM_IS_SHARED=@0@'.format(_shared_llvm.to_int())
 
@@ -1910,19 +1954,24 @@ if host_machine.system() == 'windows'
   dep_version = cpp.find_library('version')
 endif
 
-dep_elf = dependency('libelf', required : false)
-if not with_platform_windows and not dep_elf.found()
-  dep_elf = cc.find_library('elf', required : false)
-endif
-if dep_elf.found()
-  pre_args += '-DUSE_LIBELF'
-elif with_gallium_radeonsi
-  error('Gallium driver radeonsi requires libelf')
-endif
+if not with_amd_decode_only
+  dep_elf = dependency('libelf', required : false)
+  if not with_platform_windows and not dep_elf.found()
+    dep_elf = cc.find_library('elf', required : false)
+  endif
+  if dep_elf.found()
+    pre_args += '-DUSE_LIBELF'
+  elif with_gallium_radeonsi
+    error('Gallium driver radeonsi requires libelf')
+  endif
 
-dep_valgrind = dependency('valgrind', required : get_option('valgrind'))
-if dep_valgrind.found()
-  pre_args += '-DHAVE_VALGRIND'
+  dep_valgrind = dependency('valgrind', required : get_option('valgrind'))
+  if dep_valgrind.found()
+    pre_args += '-DHAVE_VALGRIND'
+  endif
+else
+  dep_elf = null_dep
+  dep_valgrind = null_dep
 endif
 
 # AddressSanitizer's leak reports need all the symbols to be present at exit to
