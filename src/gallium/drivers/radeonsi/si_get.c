@@ -5,21 +5,22 @@
  */
 
 #include <ctype.h>
+#ifndef AMD_DECODE_ONLY
 #include "compiler/nir/nir.h"
 #include "ac_nir.h"
 #include "ac_shader_util.h"
-#include "radeon_uvd_enc.h"
 #include "radeon_vce.h"
-#include "radeon_video.h"
-#include "si_pipe.h"
+#include "radeon_uvd_enc.h"
 #include "util/u_cpu_detect.h"
 #include "util/u_screen.h"
-#include "util/u_video.h"
-#include "vl/vl_video_buffer.h"
-#include <sys/utsname.h>
 #include "drm-uapi/drm.h"
 #include "aco_interface.h"
 #include "nir/nir_xfb_info.h"
+#endif
+#include "radeon_video.h"
+#include "si_pipe.h"
+#include "util/u_video.h"
+#include <sys/utsname.h>
 
 /* The capabilities reported by the kernel has priority
    over the existing logic in si_get_video_param */
@@ -29,10 +30,12 @@
    (codec > PIPE_VIDEO_FORMAT_UNKNOWN && codec <= PIPE_VIDEO_FORMAT_AV1) ? \
    (sscreen->info.dec_caps.codec_info[codec - 1].valid ? \
     sscreen->info.dec_caps.codec_info[codec - 1].attrib : 0) : 0
+#ifndef AMD_DECODE_ONLY
 #define KERNEL_ENC_CAP(codec, attrib)    \
    (codec > PIPE_VIDEO_FORMAT_UNKNOWN && codec <= PIPE_VIDEO_FORMAT_AV1) ? \
    (sscreen->info.enc_caps.codec_info[codec - 1].valid ? \
     sscreen->info.enc_caps.codec_info[codec - 1].attrib : 0) : 0
+#endif
 
 static const char *si_get_vendor(struct pipe_screen *pscreen)
 {
@@ -44,6 +47,7 @@ static const char *si_get_device_vendor(struct pipe_screen *pscreen)
    return "AMD";
 }
 
+#ifndef AMD_DECODE_ONLY
 static bool
 si_is_compute_copy_faster(struct pipe_screen *pscreen,
                           enum pipe_format src_format,
@@ -70,6 +74,7 @@ static void si_get_device_uuid(struct pipe_screen *pscreen, char *uuid)
 
    ac_compute_device_uuid(&sscreen->info, uuid, PIPE_UUID_SIZE);
 }
+#endif
 
 static const char *si_get_name(struct pipe_screen *pscreen)
 {
@@ -88,6 +93,7 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
                                   (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN) ||
                                   (profile == PIPE_VIDEO_PROFILE_AV1_MAIN);
 
+#ifndef AMD_DECODE_ONLY
    /* Return the capability of Video Post Processor.
     * Have to determine the HW version of VPE.
     * Have to check the HW limitation and
@@ -155,7 +161,9 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
       case PIPE_VIDEO_CAP_SUPPORTED:
          return (
              /* in case it is explicitly marked as not supported by the kernel */
+#ifndef AMD_DECODE_ONLY
             ((QUERYABLE_KERNEL && fully_supported_profile) ? KERNEL_ENC_CAP(codec, valid) : 1) &&
+#endif
             ((codec == PIPE_VIDEO_FORMAT_MPEG4_AVC && profile != PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH10 &&
              (sscreen->info.vcn_ip_version >= VCN_1_0_0 || si_vce_is_fw_version_supported(sscreen))) ||
             (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN &&
@@ -395,6 +403,7 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
          return 0;
       }
    }
+#endif // decode only
 
    switch (param) {
    case PIPE_VIDEO_CAP_SUPPORTED:
@@ -412,6 +421,7 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
          return false;
 
       switch (codec) {
+#ifndef AMD_DECODE_ONLY
       case PIPE_VIDEO_FORMAT_MPEG12:
          return !(sscreen->info.vcn_ip_version >= VCN_3_0_33 || profile == PIPE_VIDEO_PROFILE_MPEG1);
       case PIPE_VIDEO_FORMAT_MPEG4_AVC:
@@ -421,8 +431,10 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
             return false;
          }
          return fully_supported_profile;
+#ifndef AMD_DECODE_ONLY
       case PIPE_VIDEO_FORMAT_VC1:
          return !(sscreen->info.vcn_ip_version >= VCN_3_0_33);
+#endif
       case PIPE_VIDEO_FORMAT_HEVC:
          /* Carrizo only supports HEVC Main */
          if (sscreen->info.family >= CHIP_STONEY)
@@ -507,6 +519,7 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
          return sscreen->info.dec_caps.codec_info[codec - 1].max_level;
       } else {
          switch (profile) {
+#ifndef AMD_DECODE_ONLY            
          case PIPE_VIDEO_PROFILE_MPEG1:
             return 0;
          case PIPE_VIDEO_PROFILE_MPEG2_SIMPLE:
@@ -518,6 +531,7 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
             return 2;
          case PIPE_VIDEO_PROFILE_VC1_ADVANCED:
             return 4;
+#endif
          case PIPE_VIDEO_PROFILE_MPEG4_AVC_CONSTRAINED_BASELINE:
          case PIPE_VIDEO_PROFILE_MPEG4_AVC_MAIN:
          case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH:
@@ -549,7 +563,7 @@ static bool si_vid_is_format_supported(struct pipe_screen *screen, enum pipe_for
                                        enum pipe_video_entrypoint entrypoint)
 {
    struct si_screen *sscreen = (struct si_screen *)screen;
-
+#ifndef AMD_DECODE_ONLY
    if (sscreen->info.ip[AMD_IP_VPE].num_queues && entrypoint == PIPE_VIDEO_ENTRYPOINT_PROCESSING) {
       /* Todo:
        * Unable to confirm whether it is asking for an input or output type
@@ -566,7 +580,7 @@ static bool si_vid_is_format_supported(struct pipe_screen *screen, enum pipe_for
           (format == PIPE_FORMAT_A2B10G10R10_UNORM) || (format == PIPE_FORMAT_B10G10R10A2_UNORM) || (format == PIPE_FORMAT_R10G10B10A2_UNORM))
          return true;
    }
-
+#endif
    /* HEVC 10 bit decoding should use P010 instead of NV12 if possible */
    if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
       return (format == PIPE_FORMAT_NV12) || (format == PIPE_FORMAT_P010) ||
@@ -610,6 +624,7 @@ static bool si_vid_is_format_supported(struct pipe_screen *screen, enum pipe_for
       }
    }
 
+#ifndef AMD_DECODE_ONLY
    if ((entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) &&
           (((profile == PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH) &&
           (sscreen->info.vcn_ip_version >= VCN_2_0_0)) ||
@@ -618,7 +633,7 @@ static bool si_vid_is_format_supported(struct pipe_screen *screen, enum pipe_for
             sscreen->info.vcn_ip_version != VCN_4_0_3 &&
             sscreen->info.vcn_ip_version != VCN_5_0_1))))
       return (format == PIPE_FORMAT_P010 || format == PIPE_FORMAT_NV12);
-
+#endif
 
    /* we can only handle this one with UVD */
    if (profile != PIPE_VIDEO_PROFILE_UNKNOWN)
@@ -626,7 +641,7 @@ static bool si_vid_is_format_supported(struct pipe_screen *screen, enum pipe_for
 
    return vl_video_buffer_is_format_supported(screen, format, profile, entrypoint);
 }
-
+#ifndef AMD_DECODE_ONLY
 static uint64_t si_get_timestamp(struct pipe_screen *screen)
 {
    struct si_screen *sscreen = (struct si_screen *)screen;
@@ -677,6 +692,7 @@ static struct disk_cache *si_get_disk_shader_cache(struct pipe_screen *pscreen)
 
    return sscreen->disk_shader_cache;
 }
+#endif
 
 static void si_init_renderer_string(struct si_screen *sscreen)
 {
@@ -693,10 +709,14 @@ static void si_init_renderer_string(struct si_screen *sscreen)
       snprintf(kernel_version, sizeof(kernel_version), ", %s", uname_data.release);
 
    const char *compiler_name =
+#ifndef AMD_DECODE_ONLY
 #if AMD_LLVM_AVAILABLE
       !sscreen->use_aco ? "LLVM " MESA_LLVM_VERSION_STRING :
 #endif
       "ACO";
+#else
+      "";
+#endif
 
    snprintf(sscreen->renderer_string, sizeof(sscreen->renderer_string),
             "%s (radeonsi, %s, %s, DRM %i.%i%s)", first_name, second_name, compiler_name,
@@ -711,6 +731,7 @@ static int si_get_screen_fd(struct pipe_screen *screen)
    return ws->get_fd(ws);
 }
 
+#ifndef AMD_DECODE_ONLY
 static unsigned si_varying_expression_max_cost(nir_shader *producer, nir_shader *consumer)
 {
    unsigned num_profiles = si_get_num_shader_profiles();
@@ -725,7 +746,6 @@ static unsigned si_varying_expression_max_cost(nir_shader *producer, nir_shader 
 
    return ac_nir_varying_expression_max_cost(producer, consumer);
 }
-
 
 static void
 si_driver_thread_add_job(struct pipe_screen *screen, void *data,
@@ -816,6 +836,7 @@ static void si_lower_mediump_io_option(nir_shader *nir)
 {
    lower_mediump_io(nir, true);
 }
+#endif
 
 void si_init_screen_get_functions(struct si_screen *sscreen)
 {
@@ -823,13 +844,15 @@ void si_init_screen_get_functions(struct si_screen *sscreen)
    sscreen->b.get_vendor = si_get_vendor;
    sscreen->b.get_device_vendor = si_get_device_vendor;
    sscreen->b.get_screen_fd = si_get_screen_fd;
-   sscreen->b.is_compute_copy_faster = si_is_compute_copy_faster;
-   sscreen->b.driver_thread_add_job = si_driver_thread_add_job;
+#ifndef AMD_DECODE_ONLY
    sscreen->b.get_timestamp = si_get_timestamp;
    sscreen->b.get_device_uuid = si_get_device_uuid;
    sscreen->b.get_driver_uuid = si_get_driver_uuid;
+   sscreen->b.driver_thread_add_job = si_driver_thread_add_job;
+   sscreen->b.is_compute_copy_faster = si_is_compute_copy_faster;
    sscreen->b.query_memory_info = si_query_memory_info;
    sscreen->b.get_disk_shader_cache = si_get_disk_shader_cache;
+#endif
 
    if (sscreen->info.ip[AMD_IP_UVD].num_queues ||
        ((sscreen->info.vcn_ip_version >= VCN_4_0_0) ?
@@ -843,6 +866,7 @@ void si_init_screen_get_functions(struct si_screen *sscreen)
 
    si_init_renderer_string(sscreen);
 
+#ifndef AMD_DECODE_ONLY
    /*        |---------------------------------- Performance & Availability --------------------------------|
     *        |MAD/MAC/MADAK/MADMK|MAD_LEGACY|MAC_LEGACY|    FMA     |FMAC/FMAAK/FMAMK|FMA_LEGACY|PK_FMA_F16,|Best choice
     * Arch   |    F32,F16,F64    | F32,F16  | F32,F16  |F32,F16,F64 |    F32,F16     |   F32    |PK_FMAC_F16|F16,F32,F64
@@ -919,8 +943,10 @@ void si_init_screen_get_functions(struct si_screen *sscreen)
       MESA_SHADER_MESH : MESA_SHADER_COMPUTE;
    for (unsigned i = 0; i <= max_support_shader; i++)
       sscreen->b.nir_options[i] = options;
+#endif
 }
 
+#ifndef AMD_DECODE_ONLY
 void si_init_shader_caps(struct si_screen *sscreen)
 {
    for (unsigned i = 0; i <= MESA_SHADER_MESH; i++) {
@@ -1235,7 +1261,6 @@ void si_init_screen_caps(struct si_screen *sscreen)
    caps->resource_from_user_memory = !UTIL_ARCH_BIG_ENDIAN && sscreen->info.has_userptr;
 
    caps->device_protected_surface = sscreen->info.has_tmz_support;
-
    caps->min_map_buffer_alignment = SI_MAP_BUFFER_ALIGNMENT;
 
    caps->max_vertex_buffers = SI_MAX_ATTRIBS;
@@ -1408,3 +1433,4 @@ void si_init_screen_caps(struct si_screen *sscreen)
    if (sscreen->ws->va_range)
       sscreen->ws->va_range(sscreen->ws, &caps->min_vma, &caps->max_vma);
 }
+#endif //decode only

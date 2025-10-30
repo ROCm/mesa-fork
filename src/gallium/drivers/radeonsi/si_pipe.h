@@ -512,7 +512,7 @@ struct si_surface {
    bool color_is_int10 : 1;
    bool dcc_incompatible : 1;
    uint8_t db_format_index : 3;
-
+#ifndef AMD_DECODE_ONLY
    /* Color registers. */
    struct ac_cb_surface cb;
 
@@ -523,6 +523,7 @@ struct si_surface {
 
    /* DB registers. */
    struct ac_ds_surface ds;
+#endif
 };
 
 struct si_mmio_counter {
@@ -580,25 +581,25 @@ struct radeon_saved_cs {
    struct radeon_bo_list_item *bo_list;
    unsigned bo_count;
 };
-
+#ifndef AMD_DECODE_ONLY
 struct si_aux_context {
    struct pipe_context *ctx;
    struct u_log_context log;
    mtx_t lock;
 };
-
+#endif
 struct si_screen {
    struct pipe_screen b;
    struct radeon_winsys *ws;
-   struct disk_cache *disk_shader_cache;
 
    struct radeon_info info;
-   struct nir_shader_compiler_options *nir_options;
-   uint64_t debug_flags;
-   uint64_t shader_debug_flags;
-   uint64_t multimedia_debug_flags;
    char renderer_string[183];
-
+   uint64_t debug_flags;
+   uint64_t multimedia_debug_flags;
+#ifndef AMD_DECODE_ONLY
+   struct nir_shader_compiler_options *nir_options;
+   struct disk_cache *disk_shader_cache;
+   uint64_t shader_debug_flags;
    unsigned pa_sc_raster_config;
    unsigned pa_sc_raster_config_1;
    unsigned se_tile_repeat;
@@ -621,19 +622,21 @@ struct si_screen {
    unsigned num_use_aco_shader_blakes;
    mesa_shader_stage use_aco_shader_type;
 
+#endif //decode only
    struct {
 #define OPT_BOOL(name, dflt, description) bool name : 1;
 #define OPT_INT(name, dflt, description) int name;
 #include "si_debug_options.h"
    } options;
 
+#ifndef AMD_DECODE_ONLY
    /* Whether shaders are monolithic (1-part) or separate (3-part). */
    bool use_monolithic_shaders;
    bool record_llvm_ir;
    const char *context_roll_log_filename;
-
+#endif
    struct slab_parent_pool pool_transfers;
-
+#ifndef AMD_DECODE_ONLY
    /* Texture filter settings. */
    int force_aniso; /* -1 = disabled */
 
@@ -685,7 +688,7 @@ struct si_screen {
 
    /* Performance counters. */
    struct si_perfcounters *perfcounters;
-
+#endif // decode only
    /* If pipe_screen wants to recompute and re-emit the framebuffer,
     * sampler, and image states of all contexts, it should atomically
     * increment this.
@@ -695,6 +698,8 @@ struct si_screen {
     */
    unsigned dirty_tex_counter;
    unsigned dirty_buf_counter;
+
+#ifndef AMD_DECODE_ONLY
 
    /* Atomically increment this counter when an existing texture's
     * metadata is enabled or disabled in a way that requires changing
@@ -739,7 +744,11 @@ struct si_screen {
     * one for each thread of the low-priority shader compiler queue. */
    struct ac_llvm_compiler *compiler_lowp[10];
 
+#endif // DECODE ONLY
+
    struct util_idalloc_mt buffer_ids;
+
+#ifndef AMD_DECODE_ONLY
    struct util_vertex_state_cache vertex_state_cache;
 
    struct si_resource *attribute_pos_prim_ring;
@@ -755,8 +764,10 @@ struct si_screen {
 
    /* mesh shader */
    struct ac_task_info task_info;
+#endif
 };
 
+#ifndef AMD_DECODE_ONLY
 struct si_compute {
    struct si_shader_selector sel;
    struct si_shader shader;
@@ -992,6 +1003,8 @@ typedef void (*pipe_draw_vertex_state_func)(struct pipe_context *ctx,
                                             const struct pipe_draw_start_count_bias *draws,
                                             unsigned num_draws);
 
+#endif //decode only
+
 struct si_context {
    struct pipe_context b; /* base class */
 
@@ -1001,19 +1014,23 @@ struct si_context {
    struct radeon_winsys *ws;
    struct radeon_winsys_ctx *ctx;
    struct radeon_cmdbuf gfx_cs; /* compute IB if graphics is disabled */
-   struct radeon_cmdbuf *sdma_cs;
    struct pipe_fence_handle *last_gfx_fence;
+#ifndef AMD_DECODE_ONLY
+   struct radeon_cmdbuf *sdma_cs;
    struct si_resource *eop_bug_scratch;
    struct si_resource *eop_bug_scratch_tmz;
    struct u_upload_mgr *cached_gtt_allocator;
    struct threaded_context *tc;
    struct u_suballocator allocator_zeroed_memory;
+#endif   
    struct slab_child_pool pool_transfers;
    struct slab_child_pool pool_transfers_unsync; /* for threaded_context */
    struct pipe_device_reset_callback device_reset_callback;
+#ifndef AMD_DECODE_ONLY
    struct u_log_context *log;
    void *query_result_shader;
    void *sh_query_result_shader;
+
    struct {
       /* Memory where the shadowed registers will be saved and loaded from. */
       struct si_resource *registers;
@@ -1045,8 +1062,10 @@ struct si_context {
    struct hash_table_u64 *cs_dma_shaders; /* clear_buffer and copy_buffer shaders */
    struct hash_table_u64 *cs_blit_shaders;
    struct hash_table_u64 *ps_resolve_shaders;
+#endif
    struct si_screen *screen;
    struct util_debug_callback debug;
+#ifndef AMD_DECODE_ONLY
    struct ac_llvm_compiler *compiler; /* only non-threaded compilation */
    struct hash_table *fixed_func_tcs_shader_cache;
    struct si_resource *wait_mem_scratch;
@@ -1057,7 +1076,9 @@ struct si_context {
    bool blitter_running:1;
    bool suppress_update_ps_colorbuf0_slot:1;
    bool is_noop:1;
+#endif
    bool is_gfx_queue:1;
+#ifndef AMD_DECODE_ONLY
    bool uses_kernelq_reg_shadowing:1;
    bool uses_userq_reg_shadowing:1;
    bool gfx_flush_in_progress : 1;
@@ -1065,9 +1086,10 @@ struct si_context {
    bool compute_is_busy : 1;
    bool gfx11_force_msaa_num_samples_zero:1;
    int8_t pipeline_stats_enabled; /* -1 = unknown, 0 = disabled, 1 = enabled */
-
+#endif
    unsigned num_gfx_cs_flushes;
    unsigned initial_gfx_cs_size;
+#ifndef AMD_DECODE_ONLY
    unsigned last_dirty_tex_counter;
    unsigned last_dirty_buf_counter;
    unsigned last_compressed_colortex_counter;
@@ -1133,11 +1155,13 @@ struct si_context {
    bool compute_ping_pong_launch;
    /* if current tcs set by user */
    bool is_user_tcs;
+#endif // decode only
 
    /* video context */
    bool vcn_has_ctx;
    enum vcn_version vcn_ip_ver;
 
+#ifndef AMD_DECODE_ONLY
    /* shader information */
    uint64_t ps_inputs_read_or_disabled;
    struct si_vertex_elements *vertex_elements;
@@ -1259,6 +1283,7 @@ struct si_context {
    unsigned tes_offchip_ring_va_sgpr;
    unsigned ls_hs_rsrc2;
    unsigned ls_hs_config;
+#endif
 
    /* Debug state. */
    bool is_debug;
@@ -1266,6 +1291,7 @@ struct si_context {
    uint64_t dmesg_timestamp;
    unsigned apitrace_call_number;
 
+#ifndef AMD_DECODE_ONLY
    /* Other state */
    bool need_check_render_feedback;
    bool decompression_enabled;
@@ -1346,7 +1372,9 @@ struct si_context {
    unsigned num_L2_invalidates;
    unsigned num_L2_writebacks;
    unsigned num_resident_handles;
+#endif
    uint64_t num_alloc_tex_transfer_bytes;
+#ifndef AMD_DECODE_ONLY
    unsigned last_tex_ps_draw_ratio; /* for query */
    unsigned context_roll;
 
@@ -1363,7 +1391,6 @@ struct si_context {
    unsigned num_cs_dw_queries_suspend;
    /* Shared buffer for pipeline stats queries implemented with an atomic op */
    struct si_resource *pipeline_stats_query_buf;
-
    /* Render condition. */
    struct pipe_query *render_cond;
    unsigned render_cond_mode;
@@ -1380,11 +1407,15 @@ struct si_context {
 
    struct ac_tracked_regs tracked_regs;
 
+#endif //decode only
+
    /* Resources that need to be flushed, but will not get an explicit
     * flush_resource from the frontend and that will need to get flushed during
     * a context flush.
     */
    struct hash_table *dirty_implicit_resources;
+
+#ifndef AMD_DECODE_ONLY
 
    pipe_draw_func draw_vbo[2][2][2];
    pipe_draw_vertex_state_func draw_vertex_state[2][2][2];
@@ -1401,9 +1432,9 @@ struct si_context {
    bool sqtt_enabled;
 
    bool perfetto_enabled;
-
+#endif //decode only
    unsigned context_flags;
-
+#ifndef AMD_DECODE_ONLY
    /* Shaders. */
    void *cs_clear_image_dcc_single[2][3]; /* [is_msaa][wg_dim] */
    /* Only used for DCC MSAA clears with 4-8 fragments and 4-16 samples. */
@@ -1428,8 +1459,10 @@ struct si_context {
    uint32_t task_tmpring_size;
    struct si_pm4_state *task_preamble_state;
    struct si_resource *mesh_scratch_ring;
+#endif // decode only
 };
 
+#ifndef AMD_DECODE_ONLY
 /* si_barrier.c */
 #define SI_FB_BARRIER_SYNC_CB      BITFIELD_BIT(0)
 #define SI_FB_BARRIER_SYNC_DB      BITFIELD_BIT(1)
@@ -1484,13 +1517,16 @@ void si_gfx_copy_image(struct si_context *sctx, struct pipe_resource *dst,
                        struct pipe_resource *src, unsigned src_level,
                        const struct pipe_box *src_box);
 void si_decompress_dcc(struct si_context *sctx, struct si_texture *tex);
-void si_flush_implicit_resources(struct si_context *sctx);
 bool si_msaa_resolve_blit_via_CB(struct pipe_context *ctx, const struct pipe_blit_info *info,
                                  bool fail_if_slow);
 void si_gfx_blit(struct pipe_context *ctx, const struct pipe_blit_info *info);
+#endif
+void si_flush_implicit_resources(struct si_context *sctx);
 
+#ifndef AMD_DECODE_ONLY
 /* si_nir_optim.c */
 bool si_nir_is_output_const_if_tex_is_const(struct nir_shader *shader, float *in, float *out, int *texunit);
+#endif
 
 /* si_buffer.c */
 bool si_cs_is_buffer_referenced(struct si_context *sctx, struct pb_buffer_lean *buf,
@@ -1517,6 +1553,7 @@ bool si_reallocate_buffer_change_flags(struct si_context *sctx, struct pipe_reso
 void si_init_screen_buffer_functions(struct si_screen *sscreen);
 void si_init_buffer_functions(struct si_context *sctx);
 
+#ifndef AMD_DECODE_ONLY
 /* si_clear.c */
 #define SI_CLEAR_TYPE_CMASK  (1 << 0)
 #define SI_CLEAR_TYPE_DCC    (1 << 1)
@@ -1615,8 +1652,10 @@ void si_cp_dma_clear_buffer(struct si_context *sctx, struct radeon_cmdbuf *cs,
 void si_cp_dma_copy_buffer(struct si_context *sctx, struct pipe_resource *dst,
                            struct pipe_resource *src, uint64_t dst_offset, uint64_t src_offset,
                            unsigned size);
+#endif
 void si_cp_write_data(struct si_context *sctx, struct si_resource *buf, unsigned offset,
                       unsigned size, unsigned dst_sel, unsigned engine, const void *data);
+#ifndef AMD_DECODE_ONLY
 void si_cp_copy_data(struct si_context *sctx, struct radeon_cmdbuf *cs, unsigned dst_sel,
                      struct si_resource *dst, unsigned dst_offset, unsigned src_sel,
                      struct si_resource *src, unsigned src_offset);
@@ -1650,7 +1689,7 @@ void si_init_debug_functions(struct si_context *sctx);
 void si_check_vm_faults(struct si_context *sctx, struct radeon_saved_cs *saved);
 bool si_replace_shader(unsigned num, struct si_shader_binary *binary);
 void si_print_current_ib(struct si_context *sctx, FILE *f);
-
+#endif
 /* si_fence.c */
 void si_cp_release_mem(struct si_context *ctx, struct radeon_cmdbuf *cs, unsigned event,
                        unsigned event_flags, unsigned dst_sel, unsigned int_sel, unsigned data_sel,
@@ -1666,16 +1705,19 @@ struct pipe_fence_handle *si_create_fence(struct pipe_context *ctx,
 
 /* si_get.c */
 void si_init_screen_get_functions(struct si_screen *sscreen);
+#ifndef AMD_DECODE_ONLY
 void si_init_shader_caps(struct si_screen *sscreen);
 void si_init_compute_caps(struct si_screen *sscreen);
 void si_init_screen_caps(struct si_screen *sscreen);
 
 bool si_sdma_copy_image(struct si_context *ctx, struct si_texture *dst, struct si_texture *src);
-
+#endif
 /* si_gfx_cs.c */
 void si_reset_debug_log_buffer(struct si_context *sctx);
 void si_flush_gfx_cs(struct si_context *ctx, unsigned flags, struct pipe_fence_handle **fence);
 void si_begin_new_gfx_cs(struct si_context *ctx, bool first_cs);
+#ifndef AMD_DECODE_ONLY
+
 void si_trace_emit(struct si_context *sctx);
 void si_emit_ts(struct si_context *sctx, struct si_resource* buffer, unsigned int offset);
 /* Replace the sctx->b.draw_vbo function with a wrapper. This can be use to implement
@@ -1701,8 +1743,10 @@ struct si_context *si_get_aux_context(struct si_aux_context *ctx);
 void si_put_aux_context_flush(struct si_aux_context *ctx);
 void si_get_scratch_tmpring_size(struct si_context *sctx, unsigned bytes_per_wave,
                                  bool is_compute, unsigned *spi_tmpring_size);
+#endif
 void si_destroy_screen(struct pipe_screen *pscreen);
 
+#ifndef AMD_DECODE_ONLY
 /* si_perfcounters.c */
 void si_init_perfcounters(struct si_screen *screen);
 void si_destroy_perfcounters(struct si_screen *screen);
@@ -1749,6 +1793,7 @@ void si_test_copy_buffer(struct si_screen *sscreen);
 
 /* si_test_blit_perf.c */
 void si_test_blit_perf(struct si_screen *sscreen);
+#endif // decode only
 
 /* si_uvd.c */
 struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
@@ -1761,6 +1806,7 @@ struct pipe_video_buffer *si_video_buffer_create_with_modifiers(struct pipe_cont
                                                                 const uint64_t *modifiers,
                                                                 unsigned int modifiers_count);
 
+#ifndef AMD_DECODE_ONLY
 /* si_state_viewport.c */
 void si_update_vs_viewport_state(struct si_context *ctx);
 void si_init_viewport_functions(struct si_context *ctx);
@@ -1770,12 +1816,14 @@ void si_eliminate_fast_color_clear(struct si_context *sctx, struct si_texture *t
                                    bool *ctx_flushed);
 void si_texture_discard_cmask(struct si_screen *sscreen, struct si_texture *tex);
 bool si_init_flushed_depth_texture(struct pipe_context *ctx, struct pipe_resource *texture);
+#endif
 void si_print_texture_info(struct si_screen *sscreen, struct si_texture *tex,
                            struct u_log_context *log);
 struct pipe_resource *si_texture_create(struct pipe_screen *screen,
                                         const struct pipe_resource *templ);
 bool si_texture_commit(struct si_context *ctx, struct si_resource *res, unsigned level,
                        struct pipe_box *box, bool commit);
+#ifndef AMD_DECODE_ONLY
 bool vi_dcc_formats_compatible(struct si_screen *sscreen, enum pipe_format format1,
                                enum pipe_format format2);
 bool vi_dcc_formats_are_incompatible(struct pipe_resource *tex, unsigned level,
@@ -1783,9 +1831,10 @@ bool vi_dcc_formats_are_incompatible(struct pipe_resource *tex, unsigned level,
 void vi_disable_dcc_if_incompatible_format(struct si_context *sctx, struct pipe_resource *tex,
                                            unsigned level, enum pipe_format view_format);
 bool si_texture_disable_dcc(struct si_context *sctx, struct si_texture *tex);
+#endif
 void si_init_screen_texture_functions(struct si_screen *sscreen);
 void si_init_context_texture_functions(struct si_context *sctx);
-
+#ifndef AMD_DECODE_ONLY
 /* si_sqtt.c */
 void si_sqtt_write_event_marker(struct si_context* sctx, struct radeon_cmdbuf *rcs,
                                 enum rgp_sqtt_marker_event_type api_type,
@@ -1816,6 +1865,7 @@ void si_handle_sqtt(struct si_context *sctx, struct radeon_cmdbuf *rcs);
 /* si_mesh_shader.c */
 void si_init_task_mesh_shader_functions(struct si_context *sctx);
 
+#endif
 /*
  * common helpers
  */
@@ -1849,6 +1899,8 @@ static inline void si_texture_reference(struct si_texture **ptr, struct si_textu
 
 #if WITH_SHADERS
 #include "si_pipe_inlines.h"
+#endif
+
 #endif
 
 #define PRINT_ERR(fmt, args...)                                                                    \

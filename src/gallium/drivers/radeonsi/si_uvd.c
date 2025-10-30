@@ -25,15 +25,19 @@ struct pipe_video_buffer *si_video_buffer_create_with_modifiers(struct pipe_cont
                                                                 const uint64_t *modifiers,
                                                                 unsigned int modifiers_count)
 {
+#ifndef AMD_DECODE_ONLY
    struct si_screen *sscreen = (struct si_screen *)pipe->screen;
+   unsigned int i;
+#endif
    uint64_t *allowed_modifiers;
-   unsigned int allowed_modifiers_count, i;
+   unsigned int allowed_modifiers_count;
 
    allowed_modifiers = calloc(modifiers_count, sizeof(uint64_t));
    if (!allowed_modifiers)
       return NULL;
 
    allowed_modifiers_count = 0;
+#ifndef AMD_DECODE_ONLY
    for (i = 0; i < modifiers_count; i++) {
       uint64_t mod = modifiers[i];
 
@@ -50,10 +54,15 @@ struct pipe_video_buffer *si_video_buffer_create_with_modifiers(struct pipe_cont
 
       allowed_modifiers[allowed_modifiers_count++] = mod;
    }
-
+#else
+   free(allowed_modifiers);
+   allowed_modifiers = NULL;
+#endif
    struct pipe_video_buffer *buf =
       vl_video_buffer_create_as_resource(pipe, tmpl, allowed_modifiers, allowed_modifiers_count);
+#ifndef AMD_DECODE_ONLY
    free(allowed_modifiers);
+#endif
    return buf;
 }
 
@@ -102,6 +111,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
    return vl_video_buffer_create_as_resource(pipe, &vidbuf, modifiers, modifiers_count);
 }
 
+#ifndef AMD_DECODE_ONLY
 /* set the decoding target buffer offsets */
 static struct pb_buffer_lean *si_uvd_set_dtb(struct ruvd_msg *msg, struct vl_video_buffer *buf)
 {
@@ -128,6 +138,7 @@ static void si_vce_get_buffer(struct pipe_resource *resource, struct pb_buffer_l
    if (surface)
       *surface = &res->surface;
 }
+#endif
 
 static bool si_vcn_need_context(struct si_context *ctx)
 {
@@ -150,8 +161,9 @@ struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
                                                const struct pipe_video_codec *templ)
 {
    struct si_context *ctx = (struct si_context *)context;
-   bool vcn = ctx->vcn_ip_ver >= VCN_1_0_0;
    struct pipe_video_codec *codec = NULL;
+#ifndef AMD_DECODE_ONLY
+   bool vcn = ctx->vcn_ip_ver >= VCN_1_0_0;
 
    if (templ->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
       if (vcn) {
@@ -167,11 +179,13 @@ struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
    } else if (((struct si_screen *)(context->screen))->info.ip[AMD_IP_VPE].num_queues &&
               templ->entrypoint == PIPE_VIDEO_ENTRYPOINT_PROCESSING)
       return si_vpe_create_processor(context, templ);
-
    if (vcn) {
+#endif
       codec = radeon_create_decoder(context, templ);
       ctx->vcn_has_ctx = si_vcn_need_context(ctx);
       return codec;
+#ifndef AMD_DECODE_ONLY
    }
    return si_common_uvd_create_decoder(context, templ, si_uvd_set_dtb);
+#endif
 }
