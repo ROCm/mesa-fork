@@ -11,6 +11,7 @@ inc_src = include_directories('.')
 inc_gallium = include_directories('gallium/include')
 inc_gallium_aux = include_directories('gallium/auxiliary')
 inc_amd_common = include_directories('amd/common', 'amd/common/nir')
+inc_amd_common_only = include_directories('amd/common')
 inc_tool = include_directories('tool')
 inc_virtio = include_directories('virtio')
 inc_virtio_gpu = include_directories('virtio/virtio-gpu')
@@ -52,7 +53,9 @@ endif
 if with_gallium_or_lvp or with_gbm or with_platform_wayland
   subdir('loader')
 endif
-subdir('compiler')
+if not with_amd_decode_only
+  subdir('compiler')
+endif
 if with_poly
   subdir('poly')
 endif
@@ -177,4 +180,16 @@ if with_glx != 'disabled' and not with_glvnd
   )
 endif
 
-subdir('tool')
+if with_amd_decode_only
+  inc_amd = include_directories('amd')
+  subdir('amd/addrlib')
+  subdir('amd/common')
+  subdir('gallium/winsys/amdgpu/drm')
+  subdir('gallium/drivers/radeonsi')
+  subdir('gallium/auxiliary/vl/winsys')
+  subdir('gallium/auxiliary')
+  subdir('gallium/frontends/va')
+  subdir('gallium/targets/va')
+else
+  subdir('tool')
+endif
