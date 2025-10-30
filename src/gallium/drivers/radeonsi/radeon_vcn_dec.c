@@ -9,7 +9,11 @@
 #include "radeon_vcn_dec.h"
 
 #include "pipe/p_video_codec.h"
+#ifndef AMD_DECODE_ONLY
 #include "radeonsi/si_pipe.h"
+#else
+#include "si_pipe.h"
+#endif
 #include "util/u_memory.h"
 #include "util/u_video.h"
 #include "util/vl_zscan_data.h"
@@ -27,9 +31,11 @@
 #define IT_SCALING_TABLE_SIZE        992
 #define VP9_PROBS_TABLE_SIZE         (RDECODE_VP9_PROBS_DATA_SIZE + 256)
 
+#ifndef AMD_DECODE_ONLY
 #define NUM_MPEG2_REFS 6
-#define NUM_H264_REFS  17
 #define NUM_VC1_REFS   5
+#endif
+#define NUM_H264_REFS  17
 #define NUM_VP9_REFS   8
 #define NUM_AV1_REFS   8
 #define NUM_AV1_REFS_PER_FRAME 7
@@ -1190,7 +1196,7 @@ static rvcn_dec_message_vc1_t get_vc1_msg(struct pipe_vc1_picture_desc *pic)
 
    return result;
 }
-
+#ifndef AMD_DECODE_ONLY
 static uint32_t get_ref_pic_idx(struct radeon_decoder *dec, struct pipe_video_buffer *ref)
 {
    uint32_t min = MAX2(dec->frame_number, NUM_MPEG2_REFS) - NUM_MPEG2_REFS;
@@ -1304,6 +1310,7 @@ static rvcn_dec_message_mpeg4_asp_vld_t get_mpeg4_msg(struct radeon_decoder *dec
 
    return result;
 }
+#endif //decode only
 
 static void rvcn_dec_message_create(struct radeon_decoder *dec)
 {
@@ -1842,6 +1849,7 @@ static struct pb_buffer_lean *rvcn_dec_message_decode(struct radeon_decoder *dec
       index_codec->size = sizeof(rvcn_dec_message_hevc_t);
       break;
    }
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_VC1: {
       rvcn_dec_message_vc1_t vc1 = get_vc1_msg((struct pipe_vc1_picture_desc *)picture);
 
@@ -1873,6 +1881,7 @@ static struct pb_buffer_lean *rvcn_dec_message_decode(struct radeon_decoder *dec
       index_codec->size = sizeof(rvcn_dec_message_mpeg4_asp_vld_t);
       break;
    }
+#endif //decode only
    case PIPE_VIDEO_FORMAT_VP9: {
       rvcn_dec_message_vp9_t vp9 =
          get_vp9_msg(dec, target, (struct pipe_vp9_picture_desc *)picture);
@@ -1962,10 +1971,13 @@ static void rvcn_dec_sq_tail(struct radeon_decoder *dec)
 static int flush(struct radeon_decoder *dec, unsigned flags,
                  struct pipe_fence_handle **fence)
 {
+#ifndef AMD_DECODE_ONLY
    struct si_screen *sscreen = (struct si_screen *)dec->screen;
+#endif
 
    rvcn_dec_sq_tail(dec);
 
+#ifndef AMD_DECODE_ONLY
    if (sscreen->debug_flags & DBG(IB)) {
       struct ac_ib_parser ib_parser = {
          .f = stderr,
@@ -1979,7 +1991,7 @@ static int flush(struct radeon_decoder *dec, unsigned flags,
       };
       ac_parse_ib(&ib_parser, "IB");
    }
-
+#endif
    return dec->ws->cs_flush(&dec->cs, flags, fence);
 }
 
@@ -2268,7 +2280,7 @@ static unsigned calc_dpb_size(struct radeon_decoder *dec)
          dpb_size = align((align(width, dec->db_alignment) *
                     align(height, dec->db_alignment) * 3) / 2, 256) * max_references;
       break;
-
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_VC1:
       // the firmware seems to always assume a minimum of ref frames
       max_references = MAX2(NUM_VC1_REFS, max_references);
@@ -2306,7 +2318,7 @@ static unsigned calc_dpb_size(struct radeon_decoder *dec)
 
       dpb_size = MAX2(dpb_size, 30 * 1024 * 1024);
       break;
-
+#endif //decode only
    case PIPE_VIDEO_FORMAT_VP9:
       max_references = MAX2(max_references, 9);
 
@@ -2824,6 +2836,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
    int r, i;
 
    switch (u_reduce_video_profile(templ->profile)) {
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_MPEG12:
       stream_type = RDECODE_CODEC_MPEG2_VLD;
       break;
@@ -2835,6 +2848,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
    case PIPE_VIDEO_FORMAT_VC1:
       stream_type = RDECODE_CODEC_VC1;
       break;
+#endif
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
       width = align(width, VL_MACROBLOCK_WIDTH);
       height = align(height, VL_MACROBLOCK_HEIGHT);

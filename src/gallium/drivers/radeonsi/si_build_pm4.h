@@ -43,6 +43,8 @@
    __cs_num += (num); \
 } while (0)
 
+#ifndef AMD_DECODE_ONLY
+
 /* Packet building helpers. Don't use directly. */
 #define radeon_set_reg_seq(reg, num, idx, prefix_name, packet, reset_filter_cam) do { \
    assert((reg) >= prefix_name##_REG_OFFSET && (reg) < prefix_name##_REG_END); \
@@ -552,5 +554,6 @@ si_get_user_data_base(enum amd_gfx_level gfx_level, enum si_has_tess has_tess,
       return 0;
    }
 }
+#endif // AMD_DECODE_ONLY
 
 #endif

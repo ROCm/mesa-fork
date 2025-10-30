@@ -25,17 +25,19 @@ bool si_vid_resize_buffer(struct pipe_context *context,
                           struct si_resource **buf, unsigned new_size,
                           struct rvid_buf_offset_info *buf_ofst_info)
 {
-   struct si_context *sctx = (struct si_context *)context;
+   struct si_resource *new_buf = *buf;
+   struct si_resource *old_buf = new_buf;
+#ifndef AMD_DECODE_ONLY
    struct si_screen *sscreen = (struct si_screen *)context->screen;
    struct radeon_winsys *ws = sscreen->ws;
-   struct si_resource *new_buf = *buf;
    unsigned bytes = MIN2(new_buf->buf->size, new_size);
-   struct si_resource *old_buf = new_buf;
    void *src = NULL, *dst = NULL;
+#endif
 
    new_buf = si_resource(pipe_buffer_create(context->screen, old_buf->b.b.bind, old_buf->b.b.usage, new_size));
    if (!new_buf)
       goto error;
+#ifndef AMD_DECODE_ONLY
 
    if (old_buf->b.b.usage == PIPE_USAGE_STAGING) {
       src = ws->buffer_map(ws, old_buf->buf, NULL, PIPE_MAP_READ | RADEON_MAP_TEMPORARY);
@@ -79,14 +81,16 @@ bool si_vid_resize_buffer(struct pipe_context *context,
       }
       context->flush(context, NULL, 0);
    }
-
+#endif
    si_resource_reference(&old_buf, NULL);
    *buf = new_buf;
    return true;
 
 error:
+#ifndef AMD_DECODE_ONLY
    if (src)
       ws->buffer_unmap(ws, old_buf->buf);
+#endif
    si_resource_reference(&new_buf, NULL);
    return false;
 }

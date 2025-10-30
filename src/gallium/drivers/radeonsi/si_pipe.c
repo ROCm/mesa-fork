@@ -7,10 +7,11 @@
 
 #include "si_pipe.h"
 
-#include "driver_ddebug/dd_util.h"
 #include "radeon_uvd.h"
 #include "si_public.h"
 #include "sid.h"
+#ifndef AMD_DECODE_ONLY
+#include "driver_ddebug/dd_util.h"
 #include "ac_shader_util.h"
 #include "ac_shadowed_regs.h"
 #include "compiler/nir/nir.h"
@@ -21,7 +22,9 @@
 #include "util/u_suballoc.h"
 #include "util/u_tests.h"
 #include "util/u_upload_mgr.h"
+#endif
 #include "util/xmlconfig.h"
+#ifndef AMD_DECODE_ONLY
 #include "si_utrace.h"
 
 #include "aco_interface.h"
@@ -33,6 +36,8 @@
 #if HAVE_AMDGPU_VIRTIO
 #include "virtio/virtio-gpu/drm_hw.h"
 #endif
+
+#endif //decode only
 
 #include <xf86drm.h>
 
@@ -58,6 +63,7 @@ static const struct debug_named_value radeonsi_debug_options[] = {
    {"nofastdlist", DBG(NO_FAST_DISPLAY_LIST), "Disable fast display lists"},
    {"nodmashaders", DBG(NO_DMA_SHADERS), "Disable uploading shaders via CP DMA and map them directly."},
 
+#ifndef AMD_DECODE_ONLY
    /* 3D engine options: */
    {"nongg", DBG(NO_NGG), "Disable NGG and use the legacy pipeline."},
    {"nggc", DBG(ALWAYS_NGG_CULLING_ALL), "Always use NGG culling even when it can hurt."},
@@ -87,8 +93,10 @@ static const struct debug_named_value radeonsi_debug_options[] = {
    {"export_modifier", DBG(EXPORT_MODIFIER), "Export real modifier instead of DRM_FORMAT_MOD_INVALID"},
 
    DEBUG_NAMED_VALUE_END /* must be last */
+#endif
 };
 
+#ifndef AMD_DECODE_ONLY
 static const struct debug_named_value radeonsi_shader_debug_options[] = {
    /* Shader logging options: */
    {"vs", DBG(VS), "Print vertex shaders"},
@@ -124,7 +132,8 @@ static const struct debug_named_value radeonsi_shader_debug_options[] = {
    {"usellvm", DBG(USE_LLVM), "Use LLVM as shader compiler when possible"},
 
    DEBUG_NAMED_VALUE_END /* must be last */
-};
+}
+#endif
 
 static const struct debug_named_value radeonsi_multimedia_debug_options[] = {
    /* Multimedia options: */
@@ -139,6 +148,7 @@ static const struct debug_named_value radeonsi_multimedia_debug_options[] = {
    DEBUG_NAMED_VALUE_END /* must be last */
 };
 
+#ifndef AMD_DECODE_ONLY
 static const struct debug_named_value test_options[] = {
    /* Tests: */
    {"clearbuffer", DBG(TEST_CLEAR_BUFFER), "Test correctness of the clear_buffer compute shader"},
@@ -201,14 +211,14 @@ static void decref_implicit_resource(struct hash_entry *entry)
 {
    pipe_resource_reference((struct pipe_resource**)&entry->data, NULL);
 }
-
+#endif //decode only
 /*
  * pipe_context
  */
 static void si_destroy_context(struct pipe_context *context)
 {
    struct si_context *sctx = (struct si_context *)context;
-
+#ifndef AMD_DECODE_ONLY
    if (context->set_debug_callback)
       context->set_debug_callback(context, NULL);
 
@@ -390,10 +400,10 @@ static void si_destroy_context(struct pipe_context *context)
       }
       _mesa_hash_table_u64_destroy(sctx->ps_resolve_shaders);
    }
-
+#endif
    FREE(sctx);
 }
-
+#ifndef AMD_DECODE_ONLY
 static enum pipe_reset_status si_get_reset_status(struct pipe_context *ctx)
 {
    struct si_context *sctx = (struct si_context *)ctx;
@@ -507,10 +517,15 @@ bool si_virtgpu_probe_nctx(int fd, const struct virgl_renderer_capset_drm *caps)
    #endif
 }
 
+#endif //decode only
+
 static struct pipe_context *si_create_context(struct pipe_screen *screen, unsigned flags)
 {
    struct si_screen *sscreen = (struct si_screen *)screen;
    STATIC_ASSERT(DBG_COUNT <= 64);
+
+#ifndef AMD_DECODE_ONLY
+   int shader, i;
 
    /* Don't create a context if it's not compute-only and hw is compute-only. */
    if (!sscreen->info.has_graphics && !(flags & PIPE_CONTEXT_COMPUTE_ONLY)) {
@@ -518,14 +533,16 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
       return NULL;
    }
 
-   struct si_context *sctx = CALLOC_STRUCT(si_context);
    struct radeon_winsys *ws = sscreen->ws;
+#endif
+   struct si_context *sctx = CALLOC_STRUCT(si_context);
 
    if (!sctx) {
       mesa_loge("can't allocate a context");
       return NULL;
    }
 
+#ifndef AMD_DECODE_ONLY
    sctx->is_gfx_queue = sscreen->info.has_cs_regalloc_hang_bug ||
                         /* Compute queues hang on Raven and derivatives, see:
                          * https://gitlab.freedesktop.org/mesa/mesa/-/issues/12310 */
@@ -544,6 +561,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
 
    if (flags & PIPE_CONTEXT_DEBUG)
       sscreen->record_llvm_ir = true; /* racy but not critical */
+#endif
 
    sctx->b.screen = screen; /* this must be set first */
    sctx->b.priv = NULL;
@@ -559,7 +577,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
    sctx->family = sscreen->info.family;
    sctx->gfx_level = sscreen->info.gfx_level;
    sctx->vcn_ip_ver = sscreen->info.vcn_ip_version;
-
+#ifndef AMD_DECODE_ONLY
    if (sctx->gfx_level == GFX7 || sctx->gfx_level == GFX8 || sctx->gfx_level == GFX9) {
       sctx->eop_bug_scratch = si_aligned_buffer_create(
          &sscreen->b, PIPE_RESOURCE_FLAG_UNMAPPABLE | SI_RESOURCE_FLAG_DRIVER_INTERNAL,
@@ -569,7 +587,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
          goto fail;
       }
    }
-
+#endif
    /* Initialize the context handle and the command stream. */
    sctx->ctx = sctx->ws->ctx_create(sctx->ws, sctx->context_flags);
    if (!sctx->ctx) {
@@ -577,6 +595,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
       goto fail;
    }
 
+#ifndef AMD_DECODE_ONLY
    if (!ws->cs_create(&sctx->gfx_cs, sctx->ctx, sctx->is_gfx_queue ? AMD_IP_GFX : AMD_IP_COMPUTE,
                       (void *)si_flush_gfx_cs, sctx)) {
       mesa_loge("can't create gfx_cs");
@@ -741,6 +760,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
 
    sctx->sample_mask = 0xffff;
 
+#endif //decode only
+
    /* Initialize multimedia functions. */
    if (sscreen->info.ip[AMD_IP_UVD].num_queues ||
        ((sscreen->info.vcn_ip_version >= VCN_4_0_0) ?
@@ -754,6 +775,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
          sctx->b.create_video_buffer_with_modifiers = si_video_buffer_create_with_modifiers;
    }
 
+#ifndef AMD_DECODE_ONLY
    /* GFX7 cannot unbind a constant buffer (S_BUFFER_LOAD doesn't skip loads
     * if NUM_RECORDS == 0). We need to use a dummy buffer instead. */
    if (sctx->gfx_level == GFX7) {
@@ -819,10 +841,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
    }
 
    si_utrace_init(sctx);
-
    si_begin_new_gfx_cs(sctx, true);
    assert(sctx->gfx_cs.current.cdw == sctx->initial_gfx_cs_size);
-
    if (sctx->gfx_level >= GFX9 && sctx->gfx_level < GFX11) {
       sctx->wait_mem_scratch =
            si_aligned_buffer_create(screen,
@@ -903,7 +923,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, unsign
 
    /* Initialize compute_tmpring_size. */
    si_get_scratch_tmpring_size(sctx, 0, true, &sctx->compute_tmpring_size);
-
+#endif //decode only
    return &sctx->b;
 fail:
    mesa_loge("Failed to create a context.");
@@ -911,6 +931,7 @@ fail:
    return NULL;
 }
 
+#ifndef AMD_DECODE_ONLY
 void
 si_get_scratch_tmpring_size(struct si_context *sctx, unsigned bytes_per_wave,
                             bool is_compute, unsigned *spi_tmpring_size)
@@ -931,6 +952,7 @@ si_get_scratch_tmpring_size(struct si_context *sctx, unsigned bytes_per_wave,
                                           : sctx->max_seen_scratch_bytes_per_wave,
                                spi_tmpring_size);
 }
+#endif
 
 static bool si_is_resource_busy(struct pipe_screen *screen, struct pipe_resource *resource,
                                 unsigned usage)
@@ -955,7 +977,7 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen, v
       flags |= PIPE_CONTEXT_DEBUG;
 
    ctx = si_create_context(screen, flags);
-
+#ifndef AMD_DECODE_ONLY
    if (ctx && sscreen->info.gfx_level >= GFX9 && sscreen->debug_flags & DBG(SQTT)) {
       /* Auto-enable stable performance profile if possible. */
       if (screen->num_contexts == 1)
@@ -983,7 +1005,11 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen, v
     * disabled too. */
    if (sscreen->shader_debug_flags & DBG_ALL_SHADERS)
       return ctx;
+#else
+   return ctx;
+#endif //decode only
 
+#ifndef AMD_DECODE_ONLY   
    /* Use asynchronous flushes only on amdgpu, since the radeon
     * implementation for fence_server_sync is incomplete. */
    struct pipe_context *tc =
@@ -1002,6 +1028,7 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen, v
       threaded_context_init_bytes_mapped_limit((struct threaded_context *)tc, 4);
 
    return tc;
+#endif
 }
 
 /*
@@ -1010,12 +1037,14 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen, v
 void si_destroy_screen(struct pipe_screen *pscreen)
 {
    struct si_screen *sscreen = (struct si_screen *)pscreen;
+#ifndef AMD_DECODE_ONLY
    struct si_shader_part *parts[] = {sscreen->ps_prologs, sscreen->ps_epilogs};
    unsigned i;
+#endif
 
    if (!sscreen->ws->unref(sscreen->ws))
       return;
-
+#ifndef AMD_DECODE_ONLY
    if (sscreen->debug_flags & DBG(CACHE_STATS)) {
       printf("live shader cache:   hits = %u, misses = %u\n", sscreen->live_shader_cache.hits,
              sscreen->live_shader_cache.misses);
@@ -1089,19 +1118,24 @@ void si_destroy_screen(struct pipe_screen *pscreen)
    simple_mtx_destroy(&sscreen->tess_ring_lock);
 
    radeon_bo_reference(sscreen->ws, &sscreen->gds_oa, NULL);
+#endif //decode only
 
    slab_destroy_parent(&sscreen->pool_transfers);
-
+#ifndef AMD_DECODE_ONLY
    disk_cache_destroy(sscreen->disk_shader_cache);
    util_live_shader_cache_deinit(&sscreen->live_shader_cache);
    util_idalloc_mt_fini(&sscreen->buffer_ids);
    util_vertex_state_cache_deinit(&sscreen->vertex_state_cache);
-
+#endif //decode only
    sscreen->ws->destroy(sscreen->ws);
+#ifndef AMD_DECODE_ONLY
    FREE(sscreen->use_aco_shader_blakes);
    FREE(sscreen->nir_options);
+#endif
    FREE(sscreen);
 }
+
+#ifndef AMD_DECODE_ONLY
 
 static void si_init_gs_info(struct si_screen *sscreen)
 {
@@ -1277,12 +1311,16 @@ static void si_setup_force_shader_use_aco(struct si_screen *sscreen, bool suppor
    fclose(f);
 }
 
+#endif //decode only
+
 static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
                                                        const struct pipe_screen_config *config)
 {
    struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
+#ifndef AMD_DECODE_ONLY
    unsigned hw_threads, num_comp_hi_threads, num_comp_lo_threads;
    uint64_t test_flags;
+#endif
 
    if (!sscreen) {
       return NULL;
@@ -1298,7 +1336,7 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
 
    sscreen->ws = ws;
    ws->query_info(ws, &sscreen->info);
-
+#ifndef AMD_DECODE_ONLY
    if (sscreen->info.gfx_level >= GFX9) {
       sscreen->se_tile_repeat = 32 * sscreen->info.max_se;
    } else {
@@ -1307,11 +1345,13 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
    }
 
    sscreen->context_roll_log_filename = debug_get_option("AMD_ROLLS", NULL);
+#endif
    sscreen->debug_flags = debug_get_flags_option("R600_DEBUG", radeonsi_debug_options, 0);
    sscreen->debug_flags |= debug_get_flags_option("AMD_DEBUG", radeonsi_debug_options, 0);
-   sscreen->shader_debug_flags = debug_get_flags_option("AMD_DEBUG", radeonsi_shader_debug_options, 0);
    sscreen->multimedia_debug_flags = debug_get_flags_option("AMD_DEBUG", radeonsi_multimedia_debug_options, 0);
+#ifndef AMD_DECODE_ONLY
    test_flags = debug_get_flags_option("AMD_TEST", test_options, 0);
+   sscreen->shader_debug_flags = debug_get_flags_option("AMD_DEBUG", radeonsi_shader_debug_options, 0);
 
    if (sscreen->debug_flags & DBG(NO_DISPLAY_DCC)) {
       sscreen->info.use_display_dcc_unaligned = false;
@@ -1360,20 +1400,22 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
    }
 
    util_idalloc_mt_init_tc(&sscreen->buffer_ids);
-
+#endif //decode only
    /* Set functions first. */
    sscreen->b.context_create = si_pipe_create_context;
    sscreen->b.destroy = si_destroy_screen;
+#ifndef AMD_DECODE_ONLY
    sscreen->b.set_max_shader_compiler_threads = si_set_max_shader_compiler_threads;
    sscreen->b.is_parallel_shader_compilation_finished = si_is_parallel_shader_compilation_finished;
    sscreen->b.finalize_nir = si_finalize_nir;
 
    sscreen->nir_options = CALLOC_STRUCT(nir_shader_compiler_options);
-
+#endif
    si_init_screen_buffer_functions(sscreen);
+   si_init_screen_texture_functions(sscreen);
+#ifndef AMD_DECODE_ONLY
    si_init_screen_fence_functions(sscreen);
    si_init_screen_state_functions(sscreen);
-   si_init_screen_texture_functions(sscreen);
    si_init_screen_query_functions(sscreen);
    si_init_screen_live_shader_cache(sscreen);
 
@@ -1399,8 +1441,10 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
        sscreen->info.me_fw_version >= 173) ||
       (sscreen->info.gfx_level == GFX6 && sscreen->info.pfp_fw_version >= 79 &&
        sscreen->info.me_fw_version >= 142);
+#endif //decode
 
    si_init_screen_get_functions(sscreen);
+#ifndef AMD_DECODE_ONLY
    si_init_shader_caps(sscreen);
    si_init_compute_caps(sscreen);
    si_init_screen_caps(sscreen);
@@ -1656,7 +1700,7 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
       si_test_vmfault(sscreen, test_flags);
 
    ac_print_nonshadowed_regs(sscreen->info.gfx_level, sscreen->info.family);
-
+#endif //decode only
    return &sscreen->b;
 }
 
@@ -1669,6 +1713,7 @@ struct pipe_screen *radeonsi_screen_create(int fd, const struct pipe_screen_conf
    if (!version)
      return NULL;
 
+#ifndef AMD_DECODE_ONLY
 #if AMD_LLVM_AVAILABLE
    /* LLVM must be initialized before util_queue because both u_queue and LLVM call atexit,
     * and LLVM must call it first because its atexit handler executes C++ destructors,
@@ -1678,10 +1723,9 @@ struct pipe_screen *radeonsi_screen_create(int fd, const struct pipe_screen_conf
     */
    ac_init_llvm_once();
 #endif
-
+#endif
    driParseConfigFiles(config->options, config->options_info, 0, "radeonsi",
                        NULL, NULL, NULL, 0, NULL, 0);
-
 #ifdef HAVE_AMDGPU_VIRTIO
    if (strcmp(version->name, "virtio_gpu") == 0) {
       rw = amdgpu_winsys_create(fd, config, radeonsi_screen_create_impl, true);
@@ -1689,6 +1733,7 @@ struct pipe_screen *radeonsi_screen_create(int fd, const struct pipe_screen_conf
       rw = amdgpu_winsys_create(-1, config, radeonsi_screen_create_impl, true);
    } else
 #endif
+#ifndef AMD_DECODE_ONLY
    {
       switch (version->version_major) {
       case 2:
@@ -1696,16 +1741,21 @@ struct pipe_screen *radeonsi_screen_create(int fd, const struct pipe_screen_conf
          break;
       case 3:
          rw = amdgpu_winsys_create(fd, config, radeonsi_screen_create_impl, false);
+#else //decode only
+         rw = _amdgpu_winsys_create(fd, config, radeonsi_screen_create_impl, false);
+#endif
+#ifndef AMD_DECODE_ONLY
          break;
       }
    }
 
    si_driver_ds_init();
+#endif
 
    drmFreeVersion(version);
    return rw ? rw->screen : NULL;
 }
-
+#ifndef AMD_DECODE_ONLY
 struct si_context *si_get_aux_context(struct si_aux_context *ctx)
 {
    mtx_lock(&ctx->lock);
@@ -1717,3 +1767,4 @@ void si_put_aux_context_flush(struct si_aux_context *ctx)
    ctx->ctx->flush(ctx->ctx, NULL, 0);
    mtx_unlock(&ctx->lock);
 }
+#endif
