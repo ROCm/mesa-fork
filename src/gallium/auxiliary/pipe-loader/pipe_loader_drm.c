@@ -187,6 +187,7 @@ pipe_loader_drm_probe_fd_nodup(struct pipe_loader_device **dev, int fd, bool zin
    return false;
 }
 
+#ifndef AMD_DECODE_ONLY
 bool
 pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd, bool zink)
 {
@@ -202,6 +203,7 @@ pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd, bool zink)
 
    return ret;
 }
+#endif
 
 static int
 open_drm_render_node_minor(int minor)
