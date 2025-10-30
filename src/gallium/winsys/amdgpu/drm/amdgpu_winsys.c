@@ -44,7 +44,7 @@ static bool do_winsys_init(struct amdgpu_winsys *aws,
       fprintf(stderr, "amdgpu: Cannot create addrlib.\n");
       goto fail;
    }
-
+#ifndef AMD_DECODE_ONLY
    aws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL ||
                   strstr(debug_get_option("AMD_DEBUG", ""), "check_vm") != NULL;
    aws->noop_cs = aws->info.family_overridden || debug_get_bool_option("RADEON_NOOP", false);
@@ -56,7 +56,7 @@ static bool do_winsys_init(struct amdgpu_winsys *aws,
                       strstr(debug_get_option("AMD_DEBUG", ""), "sqtt") != NULL;
    aws->zero_all_vram_allocs = strstr(debug_get_option("R600_DEBUG", ""), "zerovram") != NULL ||
                               driQueryOptionb(config->options, "radeonsi_zerovram");
-
+#endif
    for (unsigned i = 0; i < ARRAY_SIZE(aws->queues); i++)
       simple_mtx_init(&aws->queues[i].userq.lock, mtx_plain);
 
@@ -371,9 +371,15 @@ amdgpu_drm_winsys_get_fd(struct radeon_winsys *rws)
    return sws->fd;
 }
 
-PUBLIC struct radeon_winsys *
+#ifdef AMD_DECODE_ONLY
+struct radeon_winsys *
+_amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
+#else
+PUBLIC 
+struct radeon_winsys *
 amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
-		     radeon_screen_create_t screen_create, bool is_virtio)
+#endif
+		                radeon_screen_create_t screen_create, bool is_virtio)
 {
    struct amdgpu_screen_winsys *sws;
    struct amdgpu_winsys *aws;

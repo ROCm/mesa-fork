@@ -29,12 +29,115 @@
 
 #include "pipe/p_screen.h"
 #include "pipe-loader/pipe_loader.h"
+#ifndef AMD_DECODE_ONLY
 #include "frontend/drm_driver.h"
+#endif
 
 #include "util/u_memory.h"
 #include "vl/vl_winsys.h"
-
+#ifndef AMD_DECODE_ONLY
 #include "loader.h"
+#else
+#include <fcntl.h>
+#include <xf86drm.h>
+
+#include "util/os_file.h"
+#include "util/u_debug.h"
+#include "util/driconf.h"
+
+#include "si_public.h"
+
+struct pipe_screen_config;
+
+struct pipe_loader_drm_device {
+   struct pipe_loader_device base;
+   const struct drm_driver_descriptor *dd;
+   int fd;
+};
+
+#define pipe_loader_drm_device(dev) ((struct pipe_loader_drm_device *)dev)
+
+static bool
+drm_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
+{
+   drmDevicePtr device;
+
+   if (drmGetDevice2(fd, 0, &device) != 0) {
+      return false;
+   }
+
+   if (device->bustype != DRM_BUS_PCI) {
+      drmFreeDevice(&device);
+      return false;
+   }
+
+   *vendor_id = device->deviceinfo.pci->vendor_id;
+   *chip_id = device->deviceinfo.pci->device_id;
+   drmFreeDevice(&device);
+   return true;
+}
+
+bool
+pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd, bool zink)
+{
+   int new_fd;
+
+   if (fd < 0 || (new_fd = os_dupfd_cloexec(fd)) < 0)
+     return false;
+
+   struct pipe_loader_drm_device *ddev = CALLOC_STRUCT(pipe_loader_drm_device);
+   int vendor_id, chip_id;
+
+   if (!ddev)
+      return false;
+
+   if (drm_get_pci_id_for_fd(new_fd, &vendor_id, &chip_id)) {
+      ddev->base.u.pci.vendor_id = vendor_id;
+      ddev->base.u.pci.chip_id = chip_id;
+   } else {
+      goto fail;
+   }
+   ddev->fd = new_fd;
+
+   ddev->base.driver_name = strdup("radeonsi");
+
+
+   *dev = &ddev->base;
+   return true;
+
+  fail:
+   FREE(ddev->base.driver_name);
+   FREE(ddev);
+
+   close(new_fd);
+   return false;
+}
+
+static void
+pipe_loader_drm_release(struct pipe_loader_device **dev)
+{
+   struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(*dev);
+
+   close(ddev->fd);
+   FREE(ddev->base.driver_name);
+   FREE(*dev);
+   *dev = 0;
+}
+
+struct pipe_screen *
+pipe_loader_drm_create_screen(struct pipe_loader_device *dev,
+                              const struct pipe_screen_config *config, bool sw_vk);
+
+struct pipe_screen *
+pipe_loader_drm_create_screen(struct pipe_loader_device *dev,
+                              const struct pipe_screen_config *config, bool sw_vk)
+{
+   struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(dev);
+
+   return radeonsi_screen_create(ddev->fd, config);
+}
+
+#endif
 
 static void
 vl_drm_screen_destroy(struct vl_screen *vscreen);
@@ -45,6 +148,7 @@ vl_drm_screen_create(int fd, bool honor_dri_prime)
    struct vl_screen *vscreen;
    int libva_owned_fd = -1;
 
+#ifndef AMD_DECODE_ONLY
    if (honor_dri_prime) {
       /* Pass a non-NULL value as the 2nd param in order to not
        * close the original fd - it's owned by libva.
@@ -53,13 +157,28 @@ vl_drm_screen_create(int fd, bool honor_dri_prime)
        */
       loader_get_user_preferred_fd(&fd, &libva_owned_fd);
    }
+#endif
 
    vscreen = CALLOC_STRUCT(vl_screen);
    if (!vscreen)
       return NULL;
 
    if (pipe_loader_drm_probe_fd(&vscreen->dev, fd, false))
+#ifndef AMD_DECODE_ONLY
       vscreen->pscreen = pipe_loader_create_screen(vscreen->dev, false);
+#else
+   {
+      struct pipe_screen_config config = {0};
+      const driOptionDescription radeonsi_driconf[] = {
+         #include "driinfo_radeonsi.h"
+      };
+      config.options = CALLOC_STRUCT(driOptionCache);
+      config.options_info = CALLOC_STRUCT(driOptionCache);
+      driParseOptionInfo((driOptionCache *)config.options_info, radeonsi_driconf, 
+         ARRAY_SIZE(radeonsi_driconf));
+      vscreen->pscreen = pipe_loader_drm_create_screen(vscreen->dev, &config, false);
+   }
+#endif
 
    if (libva_owned_fd >= 0 && libva_owned_fd != fd)
       close(fd);
@@ -77,7 +196,11 @@ vl_drm_screen_create(int fd, bool honor_dri_prime)
 
 release_pipe:
    if (vscreen->dev)
+#ifndef AMD_DECODE_ONLY
       pipe_loader_release(&vscreen->dev, 1);
+#else
+      pipe_loader_drm_release(&vscreen->dev);
+#endif
 
    FREE(vscreen);
    return NULL;
@@ -89,7 +212,11 @@ vl_drm_screen_destroy(struct vl_screen *vscreen)
    assert(vscreen);
 
    vscreen->pscreen->destroy(vscreen->pscreen);
+#ifndef AMD_DECODE_ONLY
    pipe_loader_release(&vscreen->dev, 1);
+#else
+   pipe_loader_drm_release(&vscreen->dev);
+#endif
    /* CHECK: The VAAPI loader/user preserves ownership of the original fd */
    FREE(vscreen);
 }
