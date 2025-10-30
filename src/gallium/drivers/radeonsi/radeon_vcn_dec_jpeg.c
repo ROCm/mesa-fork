@@ -9,7 +9,11 @@
 #include "pipe/p_video_codec.h"
 #include "radeon_vcn_dec.h"
 #include "radeon_video.h"
+#ifndef AMD_DECODE_ONLY
 #include "radeonsi/si_pipe.h"
+#else
+#include "si_pipe.h"
+#endif
 #include "util/u_memory.h"
 #include "util/u_video.h"
 

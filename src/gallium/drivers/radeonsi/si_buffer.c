@@ -117,6 +117,7 @@ void si_init_resource_fields(struct si_screen *sscreen, struct si_resource *res,
    if (res->b.b.flags & PIPE_RESOURCE_FLAG_SPARSE)
       res->flags |= RADEON_FLAG_SPARSE;
 
+#ifndef AMD_DECODE_ONLY
    /* For bypassing GL2 for performance reasons (not being slowed down by GL2, and not slowing down
     * parallel GL2 traffic) such as asynchronous DRI prime blits, or when coherency with non-GL2
     * clients is required, such as with GFX12. GFX8 and older don't support RADEON_FLAG_GL2_BYPASS.
@@ -124,7 +125,7 @@ void si_init_resource_fields(struct si_screen *sscreen, struct si_resource *res,
    if (sscreen->info.gfx_level >= GFX9 &&
        res->b.b.flags & SI_RESOURCE_FLAG_GL2_BYPASS)
       res->flags |= RADEON_FLAG_GL2_BYPASS;
-
+#endif
    if (res->b.b.flags & SI_RESOURCE_FLAG_DISCARDABLE &&
        sscreen->info.drm_major == 3 && sscreen->info.drm_minor >= 47) {
       /* Assume VRAM, so that we can use BIG_PAGE. */
@@ -187,6 +188,7 @@ bool si_alloc_resource(struct si_screen *sscreen, struct si_resource *res)
       }
    }
 
+#ifndef AMD_DECODE_ONLY
    /* Print debug information. */
    if (sscreen->debug_flags & DBG(VM) && res->b.b.target == PIPE_BUFFER) {
       fprintf(stderr, "VM start=0x%" PRIX64 "  end=0x%" PRIX64 " | Buffer %" PRIu64 " bytes | Flags: ",
@@ -205,7 +207,7 @@ bool si_alloc_resource(struct si_screen *sscreen, struct si_resource *res)
                       false);
       si_put_aux_context_flush(auxctx);
    }
-
+#endif
    return true;
 }
 
@@ -215,7 +217,9 @@ static void si_resource_destroy(struct pipe_screen *screen, struct pipe_resource
       struct si_screen *sscreen = (struct si_screen *)screen;
       struct si_resource *buffer = si_resource(buf);
 
+#ifndef AMD_DECODE_ONLY
       threaded_resource_deinit(buf);
+#endif
       util_range_destroy(&buffer->valid_buffer_range);
       radeon_bo_reference(((struct si_screen*)screen)->ws, &buffer->buf, NULL);
       util_idalloc_mt_free(&sscreen->buffer_ids, buffer->b.buffer_id_unique);
@@ -265,7 +269,7 @@ static bool si_invalidate_buffer(struct si_context *sctx, struct si_resource *bu
     */
    if (buf->b.b.flags & PIPE_RESOURCE_FLAG_FIXED_ADDRESS || buf->flags & RADEON_FLAG_NO_VMA)
       return false;
-
+#ifndef AMD_DECODE_ONLY
    /* Check if mapping this buffer would cause waiting for the GPU. */
    if (!si_is_buffer_idle(sctx, buf, RADEON_USAGE_READWRITE)) {
       /* Reallocate the buffer in the same pipe_resource. */
@@ -274,7 +278,7 @@ static bool si_invalidate_buffer(struct si_context *sctx, struct si_resource *bu
    } else {
       util_range_set_empty(&buf->valid_buffer_range);
    }
-
+#endif
    return true;
 }
 
@@ -297,9 +301,9 @@ void si_replace_buffer_storage(struct pipe_context *ctx, struct pipe_resource *d
    assert(sdst->bo_size == ssrc->bo_size);
    assert(sdst->bo_alignment_log2 == ssrc->bo_alignment_log2);
    assert(sdst->domains == ssrc->domains);
-
+#ifndef AMD_DECODE_ONLY
    si_rebind_buffer(sctx, dst);
-
+#endif
    util_idalloc_mt_free(&sctx->screen->buffer_ids, delete_buffer_id);
 }
 
@@ -359,6 +363,7 @@ static void *si_buffer_get_transfer(struct pipe_context *ctx, struct pipe_resour
    return data;
 }
 
+#ifndef AMD_DECODE_ONLY
 static void *si_buffer_transfer_map(struct pipe_context *ctx, struct pipe_resource *resource,
                                     unsigned level, unsigned usage, const struct pipe_box *box,
                                     struct pipe_transfer **ptransfer)
@@ -438,7 +443,7 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx, struct pipe_resour
          struct u_upload_mgr *uploader;
          struct si_resource *staging = NULL;
          unsigned offset;
-
+  
          /* If we are not called from the driver thread, we have
           * to use the uploader from u_threaded_context, which is
           * local to the calling thread.
@@ -464,6 +469,7 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx, struct pipe_resour
          usage |= PIPE_MAP_UNSYNCHRONIZED;
       }
    }
+
    /* Use a staging buffer in cached GTT for reads. */
    else if (((usage & PIPE_MAP_READ) && !(usage & PIPE_MAP_PERSISTENT) &&
              (buf->domains & RADEON_DOMAIN_VRAM || buf->flags & RADEON_FLAG_GTT_WC)) ||
@@ -505,14 +511,16 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx, struct pipe_resour
 
    return si_buffer_get_transfer(ctx, resource, usage, box, ptransfer, data, NULL, 0);
 }
+#endif
 
 static void si_buffer_do_flush_region(struct pipe_context *ctx, struct pipe_transfer *transfer,
                                       const struct pipe_box *box)
 {
+   struct si_resource *buf = si_resource(transfer->resource);
+#ifndef AMD_DECODE_ONLY
    struct si_context *sctx = (struct si_context *)ctx;
    struct si_transfer *stransfer = (struct si_transfer *)transfer;
-   struct si_resource *buf = si_resource(transfer->resource);
-
+   
    if (stransfer->staging) {
       unsigned src_offset =
          stransfer->b.b.offset + transfer->box.x % SI_MAP_BUFFER_ALIGNMENT + (box->x - transfer->box.x);
@@ -523,7 +531,7 @@ static void si_buffer_do_flush_region(struct pipe_context *ctx, struct pipe_tran
                      box->width);
       si_barrier_after_simple_buffer_op(sctx, 0, transfer->resource, &stransfer->staging->b.b);
    }
-
+#endif
    util_range_add(&buf->b.b, &buf->valid_buffer_range, box->x, box->x + box->width);
 }
 
@@ -540,6 +548,7 @@ static void si_buffer_flush_region(struct pipe_context *ctx, struct pipe_transfe
    }
 }
 
+#ifndef AMD_DECODE_ONLY
 static void si_buffer_transfer_unmap(struct pipe_context *ctx, struct pipe_transfer *transfer)
 {
    struct si_context *sctx = (struct si_context *)ctx;
@@ -586,6 +595,7 @@ static void si_buffer_subdata(struct pipe_context *ctx, struct pipe_resource *bu
    memcpy(map, data, size);
    si_buffer_transfer_unmap(ctx, transfer);
 }
+#endif
 
 static struct si_resource *si_alloc_buffer_struct(struct pipe_screen *screen,
                                                   const struct pipe_resource *templ,
@@ -598,7 +608,9 @@ static struct si_resource *si_alloc_buffer_struct(struct pipe_screen *screen,
    pipe_reference_init(&buf->b.b.reference, 1);
    buf->b.b.screen = screen;
 
+#ifndef AMD_DECODE_ONLY
    threaded_resource_init(&buf->b.b, allow_cpu_storage);
+#endif
 
    buf->buf = NULL;
    buf->bind_history = 0;
@@ -838,14 +850,15 @@ void si_init_screen_buffer_functions(struct si_screen *sscreen)
       sscreen->b.resource_assign_vma = si_resource_assign_vma;
    }
 }
-
+#ifndef AMD_DECODE_ONLY
 void si_init_buffer_functions(struct si_context *sctx)
 {
    sctx->b.invalidate_resource = si_invalidate_resource;
    sctx->b.buffer_map = si_buffer_transfer_map;
    sctx->b.transfer_flush_region = si_buffer_flush_region;
    sctx->b.buffer_unmap = si_buffer_transfer_unmap;
-   sctx->b.texture_subdata = u_default_texture_subdata;
+   sctx->b.texture_subdata = u_default_texture_subdata;   
    sctx->b.buffer_subdata = si_buffer_subdata;
    sctx->b.resource_commit = si_resource_commit;
 }
+#endif
