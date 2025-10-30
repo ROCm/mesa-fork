@@ -279,6 +279,7 @@ vlVaPostProcCompositor(vlVaDriver *drv,
                        enum vl_compositor_deinterlace deinterlace,
                        struct pipe_vpp_desc *param)
 {
+#ifndef AMD_DECODE_ONLY
    struct pipe_surface *surfaces;
    enum vl_compositor_rotation rotation;
    enum vl_compositor_mirror mirror;
@@ -400,9 +401,11 @@ vlVaPostProcCompositor(vlVaDriver *drv,
       vl_compositor_render(&drv->cstate, &drv->compositor, &surfaces[0], NULL, false);
    }
 
+#endif
    return VA_STATUS_SUCCESS;
 }
 
+#ifndef AMD_DECODE_ONLY
 static VAStatus
 vlVaVidEngineBlit(vlVaDriver *drv,
                   vlVaContext *context,
@@ -768,3 +771,4 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    vlVaSurfaceFlush(drv, dst_surface);
    return ret;
 }
+#endif

@@ -222,7 +222,7 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
       case VAProtectedSliceDataBufferType:
          vaStatus = vlVaHandleDecBufferType(drv, context, buf);
          break;
-
+#ifndef AMD_DECODE_ONLY
       case VAProcPipelineParameterBufferType:
          vaStatus = vlVaHandleVAProcPipelineParameterBufferType(drv, context, buf);
          break;
@@ -236,7 +236,7 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
       case VAStatsStatisticsBufferType:
          vaStatus = vlVaHandleEncBufferType(drv, context, buf);
          break;
-
+#endif
       default:
          break;
       }
@@ -286,12 +286,14 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
 {
    vlVaDriver *drv;
    vlVaContext *context;
-   vlVaBuffer *coded_buf;
    vlVaSurface *surf;
-   void *feedback = NULL;
    bool apply_av1_fg = false;
    struct pipe_video_buffer **out_target;
    int output_id;
+#ifndef AMD_DECODE_ONLY
+   vlVaBuffer *coded_buf;
+   void *feedback = NULL;
+#endif
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -352,8 +354,8 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       mtx_unlock(&drv->mutex);
       return VA_STATUS_ERROR_INVALID_SURFACE;
    }
-
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+#ifndef AMD_DECODE_ONLY
       coded_buf = context->coded_buf;
       context->desc.base.out_fence = &coded_buf->fence;
       if (u_reduce_video_profile(context->templat.profile) == PIPE_VIDEO_FORMAT_MPEG4_AVC)
@@ -395,6 +397,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       coded_buf->feedback = feedback;
       coded_buf->coded_surf = surf;
       surf->coded_buf = coded_buf;
+#endif
    } else if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_BITSTREAM) {
       context->desc.base.out_fence = &surf->fence;
    } else if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_PROCESSING) {
@@ -424,7 +427,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
                            PIPE_VIDEO_CAP_REQUIRES_FLUSH_ON_END_FRAME))
       context->decoder->flush(context->decoder);
 
-
+#ifndef AMD_DECODE_ONLY
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_BITSTREAM) {
       if (context->proc.dst_surface) {
          if (!context->decoder->process_frame ||
@@ -457,6 +460,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
          break;
       }
    }
+#endif
 
    mtx_unlock(&drv->mutex);
    return VA_STATUS_SUCCESS;

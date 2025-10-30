@@ -18,14 +18,15 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
       u_reduce_video_profile(context->templat.profile);
 
    switch (format) {
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_MPEG12:
       vlVaHandlePictureParameterBufferMPEG12(drv, context, buf);
       break;
-
+#endif
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
       vlVaHandlePictureParameterBufferH264(drv, context, buf);
       break;
-
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_VC1:
       vlVaHandlePictureParameterBufferVC1(drv, context, buf);
       break;
@@ -33,7 +34,7 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
    case PIPE_VIDEO_FORMAT_MPEG4:
       vlVaHandlePictureParameterBufferMPEG4(drv, context, buf);
       break;
-
+#endif
    case PIPE_VIDEO_FORMAT_HEVC:
       vlVaHandlePictureParameterBufferHEVC(drv, context, buf);
       break;
@@ -90,18 +91,19 @@ static void
 handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
    switch (u_reduce_video_profile(context->templat.profile)) {
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_MPEG12:
       vlVaHandleIQMatrixBufferMPEG12(context, buf);
       break;
-
+#endif
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
       vlVaHandleIQMatrixBufferH264(context, buf);
       break;
-
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_MPEG4:
       vlVaHandleIQMatrixBufferMPEG4(context, buf);
       break;
-
+#endif
    case PIPE_VIDEO_FORMAT_HEVC:
       vlVaHandleIQMatrixBufferHEVC(context, buf);
       break;
@@ -119,6 +121,7 @@ static void
 handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
    switch (u_reduce_video_profile(context->templat.profile)) {
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_MPEG12:
       vlVaHandleSliceParameterBufferMPEG12(context, buf);
       break;
@@ -126,15 +129,15 @@ handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
    case PIPE_VIDEO_FORMAT_VC1:
       vlVaHandleSliceParameterBufferVC1(context, buf);
       break;
-
+#endif
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
       vlVaHandleSliceParameterBufferH264(context, buf);
       break;
-
+#ifndef AMD_DECODE_ONLY
    case PIPE_VIDEO_FORMAT_MPEG4:
       vlVaHandleSliceParameterBufferMPEG4(context, buf);
       break;
-
+#endif
    case PIPE_VIDEO_FORMAT_HEVC:
       vlVaHandleSliceParameterBufferHEVC(context, buf);
       break;
@@ -208,9 +211,11 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
    enum pipe_video_format format = u_reduce_video_profile(context->templat.profile);
    static const uint8_t start_code_h264[] = { 0x00, 0x00, 0x01 };
    static const uint8_t start_code_h265[] = { 0x00, 0x00, 0x01 };
+#ifndef AMD_DECODE_ONLY   
    static const uint8_t start_code_vc1_frame[] = { 0x00, 0x00, 0x01, 0x0d };
    static const uint8_t start_code_vc1_field[] = { 0x00, 0x00, 0x01, 0x0c };
    static const uint8_t start_code_vc1_slice[] = { 0x00, 0x00, 0x01, 0x0b };
+#endif
    static const uint8_t eoi_jpeg[] = { 0xff, 0xd9 };
 
    if (!context->decoder)
@@ -244,6 +249,7 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
          context->bs.sizes[context->bs.num_buffers++] = sizeof(start_code_h265);
          vlVaDecoderHEVCBitstreamHeader(context, buf);
          break;
+#ifndef AMD_DECODE_ONLY
       case PIPE_VIDEO_FORMAT_VC1:
          if (bufHasStartcode(buf, 0x000001, 24))
             break;
@@ -268,6 +274,7 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
          context->bs.buffers[context->bs.num_buffers] = (void *)context->mpeg4.start_code;
          context->bs.sizes[context->bs.num_buffers++] = context->mpeg4.start_code_size;
          break;
+#endif
       case PIPE_VIDEO_FORMAT_JPEG:
          if (bufHasStartcode(buf, 0xffd8ffdb, 32))
             break;

@@ -256,7 +256,9 @@ vlVaDeriveImage(VADriverContextP ctx, VASurfaceID surface, VAImage *image)
    struct pipe_resource *buf_resources[VL_NUM_COMPONENTS];
    int i;
 
+#ifndef AMD_DECODE_ONLY
    if (!ctx)
+#endif
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
@@ -479,6 +481,7 @@ vlVaGetImage(VADriverContextP ctx, VASurfaceID surface, int x, int y,
       return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
    }
 
+#ifndef AMD_DECODE_ONLY
    if (format != surf->buffer->buffer_format) {
       tmp_surf.templat.buffer_format = format;
       tmp_surf.templat.width = vaimage->width;
@@ -515,7 +518,7 @@ vlVaGetImage(VADriverContextP ctx, VASurfaceID surface, int x, int y,
       }
       surf = &tmp_surf;
    }
-
+#endif
    memset(view_resources, 0, sizeof(view_resources));
    surf->buffer->get_resources(surf->buffer, view_resources);
 
@@ -599,6 +602,7 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
              int src_x, int src_y, unsigned int src_width, unsigned int src_height,
              int dest_x, int dest_y, unsigned int dest_width, unsigned int dest_height)
 {
+#ifndef AMD_DECODE_ONLY
    vlVaDriver *drv;
    vlVaSurface *surf;
    vlVaBuffer *img_buf;
@@ -686,6 +690,6 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
    vlVaUploadImage(drv, surf, img_buf, vaimage);
    vlVaSurfaceFlush(drv, surf);
    mtx_unlock(&drv->mutex);
-
+#endif
    return VA_STATUS_SUCCESS;
 }

@@ -174,6 +174,9 @@ vlVaAssociateSubpicture(VADriverContextP ctx, VASubpictureID subpicture,
                         unsigned short dest_width, unsigned short dest_height,
                         unsigned int flags)
 {
+#ifdef AMD_DECODE_ONLY
+   return VA_STATUS_ERROR_UNIMPLEMENTED;
+#endif
    vlVaSubpicture *sub;
    struct pipe_resource tex_temp, *tex;
    struct pipe_sampler_view sampler_templ;
@@ -251,6 +254,9 @@ VAStatus
 vlVaDeassociateSubpicture(VADriverContextP ctx, VASubpictureID subpicture,
                           VASurfaceID *target_surfaces, int num_surfaces)
 {
+#ifdef AMD_DECODE_ONLY
+   return VA_STATUS_ERROR_UNIMPLEMENTED;
+#endif
    int i;
    int j;
    vlVaSurface *surf;
