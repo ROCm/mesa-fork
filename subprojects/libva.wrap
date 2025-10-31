@@ -1,0 +1,9 @@
+[wrap-file]
+directory = libva-2.21.0
+source_url = https://github.com/intel/libva/archive/refs/tags/2.21.0.tar.gz
+source_filename = 2.21.0.tar.gz
+source_hash = f7c3fffef3f04eb146e036dad2587d852bfb70e4926d014bf437244915ef7425
+wrapdb_version = 2.21.0-1
+
+[provide]
+libva = libva_dep

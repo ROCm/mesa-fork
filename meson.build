@@ -705,16 +705,24 @@ _va_drivers = [
   with_gallium_virgl,
 ]
 
+allow_fallback_for_libva = get_option('allow-fallback-for').contains('libva')
+fallback_libva_options = []
 _va = get_option('gallium-va') \
   .require(_va_drivers.contains(true) or with_amd_decode_only,
            error_message : 'VA state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau, d3d12 (with option gallium-d3d12-video), virgl.')
 if with_amd_decode_only
   _va = true
+  fallback_libva_options += ['c_std=gnu2x', 'buildtype=release', 'with_glx=no', 'with_wayland=no', 'with_x11=no']
 endif
 _dep_va_name = host_machine.system() == 'windows' ? 'libva-win32' : 'libva'
-dep_va = dependency(_dep_va_name, version : '>= 1.8.0', required : _va)
+dep_va = dependency(
+  _dep_va_name, version : '>= 1.8.0',
+  required : _va,
+  allow_fallback: allow_fallback_for_libva,
+  default_options: fallback_libva_options
+)
 if dep_va.found()
-  dep_va_headers = dep_va.partial_dependency(compile_args : true)
+  dep_va_headers = dep_va.partial_dependency(compile_args : true, includes : true)
   if cc.has_header_symbol('va/va.h', 'VASurfaceAttribDRMFormatModifiers',
                           dependencies: dep_va_headers)
     pre_args += '-DHAVE_VA_SURFACE_ATTRIB_DRM_FORMAT_MODIFIERS'
