@@ -229,9 +229,11 @@ vl_video_buffer_destroy(struct pipe_video_buffer *buffer)
    assert(buf);
 
    for (i = 0; i < VL_NUM_COMPONENTS; ++i) {
+#ifndef AMD_DECODE_ONLY
       buf->base.context->sampler_view_release(buf->base.context, buf->sampler_view_planes[i]);
       if (i < buf->num_sampler_view_components)
          buf->base.context->sampler_view_release(buf->base.context, buf->sampler_view_components[i]);
+#endif
       pipe_resource_reference(&buf->resources[i], NULL);
    }
 
@@ -254,7 +256,7 @@ vl_video_buffer_resources(struct pipe_video_buffer *buffer,
       resources[i] = buf->resources[i];
    }
 }
-
+#ifndef AMD_DECODE_ONLY
 static struct pipe_sampler_view **
 vl_video_buffer_sampler_view_planes(struct pipe_video_buffer *buffer)
 {
@@ -351,7 +353,7 @@ error:
 
    return NULL;
 }
-
+#endif
 static struct pipe_surface *
 vl_video_buffer_get_surfaces(struct pipe_video_buffer *buffer)
 {
@@ -495,8 +497,10 @@ vl_video_buffer_create_ex2(struct pipe_context *pipe,
    buffer->base.context = pipe;
    buffer->base.destroy = vl_video_buffer_destroy;
    buffer->base.get_resources = vl_video_buffer_resources;
+#ifndef AMD_DECODE_ONLY
    buffer->base.get_sampler_view_planes = vl_video_buffer_sampler_view_planes;
    buffer->base.get_sampler_view_components = vl_video_buffer_sampler_view_components;
+#endif
    buffer->base.get_surfaces = vl_video_buffer_get_surfaces;
 
    for (i = 0; i < num_planes; ++i)
