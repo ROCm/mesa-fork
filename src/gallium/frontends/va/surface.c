@@ -1028,7 +1028,7 @@ vlVaSwitchToProtectedContext(vlVaDriver *drv)
 
    drv->pipe2 = drv->pipe;
    drv->pipe = ctx;
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_COMPOSITOR
    if (drv->cstate.pipe) {
       vl_compositor_cleanup_state(&drv->cstate);
       vl_compositor_cleanup(&drv->compositor);
