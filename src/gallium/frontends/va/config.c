@@ -77,7 +77,7 @@ vlVaQueryConfigEntrypoints(VADriverContextP ctx, VAProfile profile,
 {
    struct pipe_screen *pscreen;
    enum pipe_video_profile p;
-#ifndef AMD_DECODE_ONLY
+#if VIDEO_CODEC_AV1ENC
    bool check_av1enc_support = false;
 #endif
 
@@ -101,7 +101,7 @@ vlVaQueryConfigEntrypoints(VADriverContextP ctx, VAProfile profile,
    if (vl_codec_supported(pscreen, p, false))
       entrypoint_list[(*num_entrypoints)++] = VAEntrypointVLD;
 
-#ifndef AMD_DECODE_ONLY
+#if VIDEO_CODEC_AV1ENC
 #if VA_CHECK_VERSION(1, 16, 0)
    if (p == PIPE_VIDEO_PROFILE_AV1_MAIN)
       check_av1enc_support = true;
