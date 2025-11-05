@@ -111,7 +111,7 @@ static struct VADriverVTable vtable =
    &vlVaMapBuffer2,
 #endif
 };
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_POSTPROC
 static struct VADriverVTableVPP vtable_vpp =
 {
    1,
@@ -216,7 +216,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    if (!drv->htab)
       goto error_htab;
 
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_COMPOSITOR
    bool can_init_compositor = drv->vscreen->pscreen->caps.graphics ||
                               drv->vscreen->pscreen->caps.compute;
    if (can_init_compositor) {
@@ -232,7 +232,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    ctx->version_major = 0;
    ctx->version_minor = 1;
    *ctx->vtable = vtable;
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_POSTPROC
    *ctx->vtable_vpp = vtable_vpp;
 #endif
    ctx->max_profiles = PIPE_VIDEO_PROFILE_MAX - PIPE_VIDEO_PROFILE_UNKNOWN - 1;
@@ -253,7 +253,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 
    return VA_STATUS_SUCCESS;
    
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_COMPOSITOR
 error_compositor_state:
    if (can_init_compositor)
       vl_compositor_cleanup(&drv->compositor);
@@ -545,7 +545,7 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
       context->decoder->destroy(context->decoder);
    }
 
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_POSTPROC
    if (context->deint) {
       vl_deint_filter_cleanup(context->deint);
       FREE(context->deint);
@@ -572,7 +572,7 @@ vlVaTerminate(VADriverContextP ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = ctx->pDriverData;
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_COMPOSITOR
    vl_compositor_cleanup_state(&drv->cstate);
    vl_compositor_cleanup(&drv->compositor);
 #endif

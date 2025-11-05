@@ -682,7 +682,7 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
       config->entrypoint = PIPE_VIDEO_ENTRYPOINT_BITSTREAM;
       break;
    case VAEntrypointEncSlice:
-#ifdef AMD_DECODE_ONLY
+#ifndef VA_ENCODER
       return VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
 #else
       if (!vl_codec_supported(pscreen, p, true)) {

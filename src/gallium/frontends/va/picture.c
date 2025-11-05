@@ -222,11 +222,12 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
       case VAProtectedSliceDataBufferType:
          vaStatus = vlVaHandleDecBufferType(drv, context, buf);
          break;
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_POSTPROC
       case VAProcPipelineParameterBufferType:
          vaStatus = vlVaHandleVAProcPipelineParameterBufferType(drv, context, buf);
          break;
-
+#endif
+#ifdef VA_ENCODER
       case VAEncSequenceParameterBufferType:
       case VAEncMiscParameterBufferType:
       case VAEncPictureParameterBufferType:
@@ -291,7 +292,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    bool apply_av1_fg = false;
    struct pipe_video_buffer **out_target;
    int output_id;
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_ENCODER
    vlVaBuffer *coded_buf;
    void *feedback = NULL;
 #endif
@@ -354,7 +355,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       return VA_STATUS_ERROR_INVALID_SURFACE;
    }
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
-#ifndef AMD_DECODE_ONLY
+#ifdef VA_ENCODER
       coded_buf = context->coded_buf;
       context->desc.base.out_fence = &coded_buf->fence;
       if (u_reduce_video_profile(context->templat.profile) == PIPE_VIDEO_FORMAT_MPEG4_AVC)
@@ -377,6 +378,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
          context->desc.av1enc.requested_metadata = driver_metadata_support;
 
       context->desc.base.in_fence = surf->fence;
+#ifdef VA_POSTPROC
       if (context->proc.dst_surface) {
          if (!context->decoder->process_frame ||
              context->decoder->process_frame(context->decoder, context->target, &context->proc.vpp) != 0) {
@@ -390,6 +392,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
          }
          context->target = context->proc.vpp.dst;
       }
+#endif
       context->decoder->begin_frame(context->decoder, context->target, &context->desc.base);
       context->decoder->encode_bitstream(context->decoder, context->target,
                                          coded_buf->derived_surface.resource, &feedback);
@@ -426,8 +429,8 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
                            PIPE_VIDEO_CAP_REQUIRES_FLUSH_ON_END_FRAME))
       context->decoder->flush(context->decoder);
 
-#ifndef AMD_DECODE_ONLY
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_BITSTREAM) {
+#ifdef VA_POSTPROC
       if (context->proc.dst_surface) {
          if (!context->decoder->process_frame ||
              context->decoder->process_frame(context->decoder, context->target, &context->proc.vpp) != 0) {
@@ -440,7 +443,9 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
             }
          }
       }
+#endif
    } else if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+#ifdef VA_ENCODER
       switch (u_reduce_video_profile(context->templat.profile)) {
       case PIPE_VIDEO_FORMAT_AV1:
          context->desc.av1enc.frame_num++;
@@ -458,8 +463,8 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       default:
          break;
       }
-   }
 #endif
+   }
 
    mtx_unlock(&drv->mutex);
    return VA_STATUS_SUCCESS;
