@@ -713,6 +713,7 @@ _va = get_option('gallium-va') \
            error_message : 'VA state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau, d3d12 (with option gallium-d3d12-video), virgl.')
 if with_amd_decode_only
   _va = true
+  fallback_libva_options += ['c_std=gnu2x', 'buildtype=release', 'with_glx=no', 'with_wayland=no', 'with_x11=no']
 endif
 _dep_va_name = host_machine.system() == 'windows' ? 'libva-win32' : 'libva'
 dep_va = dependency(
