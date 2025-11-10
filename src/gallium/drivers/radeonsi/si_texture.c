@@ -7,12 +7,8 @@
 
 #include "drm-uapi/drm_fourcc.h"
 #include "si_pipe.h"
-#ifndef AMD_DECODE_ONLY
 #include "si_query.h"
 #include "sid.h"
-#else
-#include "ac_surface.h"
-#endif
 #include "frontend/drm_driver.h"
 #include "util/format/u_format.h"
 #include "util/os_time.h"
@@ -41,7 +37,6 @@ static void si_copy_region_with_blit(struct pipe_context *pipe, struct pipe_reso
                                      unsigned dstz, struct pipe_resource *src, unsigned src_level,
                                      const struct pipe_box *src_box)
 {
-#ifndef AMD_DECODE_ONLY
    struct pipe_blit_info blit;
 
    memset(&blit, 0, sizeof(blit));
@@ -69,7 +64,6 @@ static void si_copy_region_with_blit(struct pipe_context *pipe, struct pipe_reso
       else
          pipe->blit(pipe, &blit);
    }
-#endif
 }
 
 /* Copy all planes of multi-plane texture */
@@ -78,7 +72,6 @@ static bool si_copy_multi_plane_texture(struct pipe_context *ctx, struct pipe_re
                                         struct pipe_resource *src, unsigned src_level,
                                         const struct pipe_box *src_box)
 {
-#ifndef AMD_DECODE_ONLY
    unsigned i, dx, dy;
    struct si_texture *src_tex = (struct si_texture *)src;
    struct si_texture *dst_tex = (struct si_texture *)dst;
@@ -105,14 +98,13 @@ static bool si_copy_multi_plane_texture(struct pipe_context *ctx, struct pipe_re
       src = src->next;
       dst = dst->next;
    }
-#endif
+
    return true;
 }
 
 /* Copy from a full GPU texture to a transfer's staging one. */
 static void si_copy_to_staging_texture(struct pipe_context *ctx, struct si_transfer *stransfer)
 {
-#ifndef AMD_DECODE_ONLY
    struct pipe_transfer *transfer = (struct pipe_transfer *)stransfer;
    struct pipe_resource *dst = &stransfer->staging->b.b;
    struct pipe_resource *src = transfer->resource;
@@ -128,13 +120,11 @@ static void si_copy_to_staging_texture(struct pipe_context *ctx, struct si_trans
       return;
 
    si_resource_copy_region(ctx, dst, 0, 0, 0, 0, src, src_level, &transfer->box);
-#endif
 }
 
 /* Copy from a transfer's staging texture to a full GPU one. */
 static void si_copy_from_staging_texture(struct pipe_context *ctx, struct si_transfer *stransfer)
 {
-#ifndef AMD_DECODE_ONLY
    struct pipe_transfer *transfer = (struct pipe_transfer *)stransfer;
    struct pipe_resource *dst = transfer->resource;
    struct pipe_resource *src = &stransfer->staging->b.b;
@@ -159,9 +149,9 @@ static void si_copy_from_staging_texture(struct pipe_context *ctx, struct si_tra
       sbox.width = util_format_get_nblocksx(dst->format, sbox.width);
       sbox.height = util_format_get_nblocksx(dst->format, sbox.height);
    }
+
    si_resource_copy_region(ctx, dst, transfer->level, transfer->box.x, transfer->box.y,
                            transfer->box.z, src, 0, &sbox);
-#endif
 }
 
 static uint64_t si_texture_get_offset(struct si_screen *sscreen, struct si_texture *tex,
@@ -211,12 +201,9 @@ static int si_init_surface(struct si_screen *sscreen, struct radeon_surf *surfac
                            uint64_t modifier, bool is_imported, bool is_scanout,
                            bool is_flushed_depth, bool tc_compatible_htile)
 {
-#ifndef AMD_DECODE_ONLY
    const struct util_format_description *desc = util_format_description(ptex->format);
    bool is_depth = util_format_has_depth(desc);
    bool is_stencil = util_format_has_stencil(desc);
-#endif
-
    int r;
    unsigned bpe;
    uint64_t flags = 0;
@@ -227,7 +214,7 @@ static int si_init_surface(struct si_screen *sscreen, struct radeon_surf *surfac
       bpe = util_format_get_blocksize(ptex->format);
       assert(util_is_power_of_two_or_zero(bpe));
    }
-#ifndef AMD_DECODE_ONLY
+
    if (sscreen->info.gfx_level >= GFX12) {
       if (!is_flushed_depth && is_depth) {
          flags |= RADEON_SURF_ZBUFFER;
@@ -398,7 +385,7 @@ static int si_init_surface(struct si_screen *sscreen, struct radeon_surf *surfac
 
       flags |= RADEON_SURF_SCANOUT;
    }
-#endif
+
    if (ptex->bind & PIPE_BIND_SHARED)
       flags |= RADEON_SURF_SHAREABLE;
 
@@ -421,7 +408,7 @@ static int si_init_surface(struct si_screen *sscreen, struct radeon_surf *surfac
 
    return 0;
 }
-#ifndef AMD_DECODE_ONLY
+
 void si_eliminate_fast_color_clear(struct si_context *sctx, struct si_texture *tex,
                                    bool *ctx_flushed)
 {
@@ -484,7 +471,6 @@ static bool si_texture_discard_dcc(struct si_screen *sscreen, struct si_texture 
 
    /* Notify all contexts about the change. */
    p_atomic_inc(&sscreen->dirty_tex_counter);
-
    return true;
 }
 
@@ -525,16 +511,14 @@ bool si_texture_disable_dcc(struct si_context *sctx, struct si_texture *tex)
 
    return si_texture_discard_dcc(sscreen, tex);
 }
-#endif
+
 static void si_reallocate_texture_inplace(struct si_context *sctx, struct si_texture *tex,
                                           unsigned new_bind_flag, bool invalidate_storage)
 {
    struct pipe_screen *screen = sctx->b.screen;
    struct si_texture *new_tex;
    struct pipe_resource templ = tex->buffer.b.b;
-#ifndef AMD_DECODE_ONLY
    unsigned i;
-#endif
 
    templ.bind |= new_bind_flag;
 
@@ -560,7 +544,6 @@ static void si_reallocate_texture_inplace(struct si_context *sctx, struct si_tex
    if (!new_tex)
       return;
 
-#ifndef AMD_DECODE_ONLY
    /* Copy the pixels to the new texture. */
    if (!invalidate_storage) {
       for (i = 0; i <= templ.last_level; i++) {
@@ -578,8 +561,6 @@ static void si_reallocate_texture_inplace(struct si_context *sctx, struct si_tex
       si_texture_discard_cmask(sctx->screen, tex);
       si_texture_discard_dcc(sctx->screen, tex);
    }
-#endif
-
 
    /* Replace the structure fields of tex. */
    tex->buffer.b.b.bind = templ.bind;
@@ -641,7 +622,6 @@ static void si_reallocate_texture_inplace(struct si_context *sctx, struct si_tex
 
 static void si_set_tex_bo_metadata(struct si_screen *sscreen, struct si_texture *tex)
 {
-#ifndef AMD_DECODE_ONLY
    struct pipe_resource *res = &tex->buffer.b.b;
    struct radeon_bo_metadata md;
 
@@ -666,7 +646,6 @@ static void si_set_tex_bo_metadata(struct si_screen *sscreen, struct si_texture 
                                    desc, &md.size_metadata, md.metadata,
                                    sscreen->debug_flags & DBG(EXTRA_METADATA));
    sscreen->ws->buffer_set_metadata(sscreen->ws, tex->buffer.buf, &md, &tex->surface);
-#endif
 }
 
 static bool si_displayable_dcc_needs_explicit_flush(struct si_texture *tex)
@@ -792,18 +771,16 @@ static bool si_texture_get_handle(struct pipe_screen *screen, struct pipe_contex
                                   unsigned usage)
 {
    struct si_screen *sscreen = (struct si_screen *)screen;
+   struct si_context *sctx;
    struct si_resource *res = si_resource(resource);
    struct si_texture *tex = (struct si_texture *)resource;
+   bool update_metadata = false;
    unsigned stride, offset, slice_size;
    uint64_t modifier = DRM_FORMAT_MOD_INVALID;
-#ifndef AMD_DECODE_ONLY
-   struct si_context *sctx;
-   bool update_metadata = false;
    bool flush = false;
-   
+
    ctx = threaded_context_unwrap_sync(ctx);
    sctx = ctx ? (struct si_context *)ctx : si_get_aux_context(&sscreen->aux_context.general);
-#endif
 
    if (resource->target != PIPE_BUFFER) {
       unsigned plane = whandle->plane;
@@ -821,20 +798,16 @@ static bool si_texture_get_handle(struct pipe_screen *screen, struct pipe_contex
        * interop in the future.
        */
       if (resource->nr_samples > 1 || tex->is_depth) {
-#ifndef AMD_DECODE_ONLY
          if (!ctx)
             si_put_aux_context_flush(&sscreen->aux_context.general);
-#endif
          return false;
       }
 
       whandle->size = tex->buffer.bo_size;
 
       if (plane) {
-#ifndef AMD_DECODE_ONLY
          if (!ctx)
             si_put_aux_context_flush(&sscreen->aux_context.general);
-#endif
          whandle->offset = ac_surface_get_plane_offset(sscreen->info.gfx_level,
                                                        &tex->surface, plane, 0);
          whandle->stride = ac_surface_get_plane_stride(sscreen->info.gfx_level,
@@ -843,7 +816,6 @@ static bool si_texture_get_handle(struct pipe_screen *screen, struct pipe_contex
          return sscreen->ws->buffer_get_handle(sscreen->ws, res->buf, whandle);
       }
 
-#ifndef AMD_DECODE_ONLY
       /* Move a suballocated texture into a non-suballocated allocation. */
       if (sscreen->ws->buffer_is_suballocated(res->buf) ||
           sscreen->ws->buffer_has_vm_always_valid(res->buf) ||
@@ -916,10 +888,9 @@ static bool si_texture_get_handle(struct pipe_screen *screen, struct pipe_contex
       }
 
       modifier = tex->surface.modifier;
-#endif //decode only
    } else {
-#ifndef AMD_DECODE_ONLY
       tc_buffer_disable_cpu_storage(&res->b.b);
+
       /* Buffer exports are for the OpenCL interop. */
       /* Move a suballocated buffer into a non-suballocated allocation. */
       if (sscreen->ws->buffer_is_suballocated(res->buf) ||
@@ -938,7 +909,6 @@ static bool si_texture_get_handle(struct pipe_screen *screen, struct pipe_contex
          assert(res->b.b.bind & PIPE_BIND_SHARED);
          assert(res->flags & RADEON_FLAG_NO_SUBALLOC);
       }
-#endif
 
       /* Buffers */
       slice_size = 0;
@@ -958,12 +928,10 @@ static bool si_texture_get_handle(struct pipe_screen *screen, struct pipe_contex
       res->external_usage = usage;
    }
 
-#ifndef AMD_DECODE_ONLY
    if (flush && ctx)
       sctx->b.flush(&sctx->b, NULL, 0);
    if (!ctx)
       si_put_aux_context_flush(&sscreen->aux_context.general);
-#endif
 
    whandle->stride = stride;
    whandle->offset = offset + slice_size * whandle->layer;
@@ -971,7 +939,7 @@ static bool si_texture_get_handle(struct pipe_screen *screen, struct pipe_contex
 
    return sscreen->ws->buffer_get_handle(sscreen->ws, res->buf, whandle);
 }
-#ifndef AMD_DECODE_ONLY
+
 void si_print_texture_info(struct si_screen *sscreen, struct si_texture *tex,
                            struct u_log_context *log)
 {
@@ -1058,7 +1026,6 @@ static void print_debug_tex(struct si_screen *sscreen, struct si_texture *tex)
       u_log_context_destroy(&log);
    }
 }
-#endif
 
 /**
  * Common function for si_texture_create and si_texture_from_handle.
@@ -1148,7 +1115,7 @@ static struct si_texture *si_texture_create_object(struct pipe_screen *screen,
       if (sscreen->ws->buffer_get_flags)
          resource->flags = sscreen->ws->buffer_get_flags(resource->buf);
    }
-#ifndef AMD_DECODE_ONLY
+
    if (sscreen->debug_flags & DBG(VM)) {
       fprintf(stderr,
               "VM start=0x%" PRIX64 "  end=0x%" PRIX64
@@ -1189,6 +1156,7 @@ static struct si_texture *si_texture_create_object(struct pipe_screen *screen,
    }
 
    /* Everything below is for GFX6-11. */
+
    /* Use 1.0 as the default clear value to get optimal ZRANGE_PRECISION if we don't
     * get a fast clear.
     */
@@ -1370,7 +1338,7 @@ static struct si_texture *si_texture_create_object(struct pipe_screen *screen,
 
    /* Initialize the CMASK base register value. */
    tex->cmask_base_address_reg = (tex->buffer.gpu_address + tex->surface.cmask_offset) >> 8;
-#endif //decode only
+
    return tex;
 
 error:
@@ -1464,7 +1432,7 @@ si_texture_create_with_modifier(struct pipe_screen *screen,
 {
    struct si_screen *sscreen = (struct si_screen *)screen;
    bool is_zs = util_format_is_depth_or_stencil(templ->format);
-#ifndef AMD_DECODE_ONLY
+
    if (templ->nr_samples >= 2) {
       /* This is hackish (overwriting the const pipe_resource template),
        * but should be harmless and gallium frontends can also see
@@ -1478,7 +1446,7 @@ si_texture_create_with_modifier(struct pipe_screen *screen,
          ((struct pipe_resource *)templ)->nr_storage_samples = sscreen->eqaa_force_color_samples;
       }
    }
-#endif
+
    bool is_flushed_depth = templ->flags & SI_RESOURCE_FLAG_FLUSHED_DEPTH ||
                            templ->flags & SI_RESOURCE_FLAG_FORCE_LINEAR;
    bool tc_compatible_htile = is_zs && !is_flushed_depth &&
@@ -1930,7 +1898,7 @@ static struct pipe_resource *si_texture_from_winsys_buffer(struct si_screen *ssc
       si_texture_reference(&tex, NULL);
       return NULL;
    }
-#ifndef AMD_DECODE_ONLY
+
    /* Displayable DCC requires an explicit flush. */
    if (dedicated && offset == 0 && !(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) &&
        si_displayable_dcc_needs_explicit_flush(tex)) {
@@ -1940,7 +1908,7 @@ static struct pipe_resource *si_texture_from_winsys_buffer(struct si_screen *ssc
          si_set_tex_bo_metadata(sscreen, tex);
       }
    }
-#endif
+
    assert(tex->surface.tile_swizzle == 0);
    return &tex->buffer.b.b;
 }
@@ -1979,7 +1947,7 @@ static struct pipe_resource *si_texture_from_handle(struct pipe_screen *screen,
    return si_texture_from_winsys_buffer(sscreen, templ, buf, whandle->stride, whandle->offset,
                                         whandle->modifier, usage, true, true);
 }
-#ifndef AMD_DECODE_ONLY
+
 bool si_init_flushed_depth_texture(struct pipe_context *ctx, struct pipe_resource *texture)
 {
    struct si_texture *tex = (struct si_texture *)texture;
@@ -2038,7 +2006,7 @@ bool si_init_flushed_depth_texture(struct pipe_context *ctx, struct pipe_resourc
    }
    return true;
 }
-#endif
+
 /**
  * Initialize the pipe_resource descriptor to be of the same size as the box,
  * which is supposed to hold a subregion of the texture "orig" at the given
@@ -2125,9 +2093,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx, struct pipe_resou
    struct si_resource *buf;
    uint64_t offset = 0;
    char *map;
-#ifndef AMD_DECODE_ONLY
    bool use_staging_texture = tex->buffer.flags & RADEON_FLAG_ENCRYPTED;
-#endif
    unsigned real_level = texture->nr_samples > 1 ? 0 : level;
 
    assert(texture->target != PIPE_BUFFER);
@@ -2140,7 +2106,6 @@ static void *si_texture_transfer_map(struct pipe_context *ctx, struct pipe_resou
    if ((tex->buffer.flags & RADEON_FLAG_ENCRYPTED) && usage & PIPE_MAP_READ)
       return NULL;
 
-#ifndef AMD_DECODE_ONLY
    if (tex->is_depth || tex->buffer.flags & RADEON_FLAG_SPARSE) {
       /* Depth and sparse textures use staging unconditionally. */
       use_staging_texture = true;
@@ -2155,7 +2120,6 @@ static void *si_texture_transfer_map(struct pipe_context *ctx, struct pipe_resou
 
          si_reallocate_texture_inplace(sctx, tex, PIPE_BIND_LINEAR, can_invalidate);
       }
-
 
       /* Tiled textures need to be converted into a linear texture for CPU
        * access. The staging texture is always linear and is placed in GART.
@@ -2184,7 +2148,6 @@ static void *si_texture_transfer_map(struct pipe_context *ctx, struct pipe_resou
             use_staging_texture = true;
       }
    }
-#endif
 
    trans = CALLOC_STRUCT(si_transfer);
    if (!trans)
@@ -2193,7 +2156,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx, struct pipe_resou
    trans->b.b.level = level;
    trans->b.b.usage = usage;
    trans->b.b.box = *box;
-#ifndef AMD_DECODE_ONLY
+
    if (use_staging_texture) {
       struct pipe_resource resource;
       struct si_texture *staging;
@@ -2229,14 +2192,12 @@ static void *si_texture_transfer_map(struct pipe_context *ctx, struct pipe_resou
 
       buf = trans->staging;
    } else {
-#endif
       /* the resource is mapped directly */
       offset = si_texture_get_offset(sctx->screen, tex, real_level, box, &trans->b.b.stride,
                                      &trans->b.b.layer_stride);
       buf = &tex->buffer;
-#ifndef AMD_DECODE_ONLY
    }
-#endif
+
    /* Always unmap texture CPU mappings on 32-bit architectures, so that
     * we don't run out of the CPU address space.
     */
@@ -2280,7 +2241,6 @@ static void si_texture_transfer_unmap(struct pipe_context *ctx, struct pipe_tran
       si_resource_reference(&stransfer->staging, NULL);
    }
 
-#ifndef AMD_DECODE_ONLY
    /* Heuristic for {upload, draw, upload, draw, ..}:
     *
     * Flush the gfx IB if we've allocated too much texture storage.
@@ -2298,12 +2258,11 @@ static void si_texture_transfer_unmap(struct pipe_context *ctx, struct pipe_tran
       si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
       sctx->num_alloc_tex_transfer_bytes = 0;
    }
-#endif
 
    pipe_resource_reference(&transfer->resource, NULL);
    FREE(transfer);
 }
-#ifndef AMD_DECODE_ONLY
+
 /* Return if it's allowed to reinterpret one format as another with DCC enabled.
  */
 bool vi_dcc_formats_compatible(struct si_screen *sscreen, enum pipe_format format1,
@@ -2384,7 +2343,7 @@ void vi_disable_dcc_if_incompatible_format(struct si_context *sctx, struct pipe_
       if (!si_texture_disable_dcc(sctx, stex))
          si_decompress_dcc(sctx, stex);
 }
-#endif
+
 static struct pipe_surface *si_create_surface(struct pipe_context *pipe, struct pipe_resource *tex,
                                               const struct pipe_surface *templ)
 {
@@ -2434,11 +2393,9 @@ static struct pipe_surface *si_create_surface(struct pipe_context *pipe, struct 
    surface->width0 = width0;
    surface->height0 = height0;
 
-#ifndef AMD_DECODE_ONLY
    surface->dcc_incompatible =
       tex->target != PIPE_BUFFER &&
       vi_dcc_formats_are_incompatible(tex, templ->level, templ->format);
-#endif
    return &surface->base;
 }
 
@@ -2604,7 +2561,6 @@ void si_init_screen_texture_functions(struct si_screen *sscreen)
 {
    sscreen->b.resource_from_handle = si_texture_from_handle;
    sscreen->b.resource_get_handle = si_texture_get_handle;
-#ifndef AMD_DECODE_ONLY
    sscreen->b.resource_get_param = si_resource_get_param;
    sscreen->b.resource_from_memobj = si_resource_from_memobj;
    sscreen->b.memobj_create_from_handle = si_memobj_from_handle;
@@ -2618,14 +2574,11 @@ void si_init_screen_texture_functions(struct si_screen *sscreen)
     * allowed in combination with lack of error reporting in
     * gbm_dri_surface_create */
    if (sscreen->info.gfx_level >= GFX9 && sscreen->info.kernel_has_modifiers) {
-#endif
       sscreen->b.resource_create_with_modifiers = si_texture_create_with_modifiers;
-#ifndef AMD_DECODE_ONLY
       sscreen->b.query_dmabuf_modifiers = si_query_dmabuf_modifiers;
       sscreen->b.is_dmabuf_modifier_supported = si_is_dmabuf_modifier_supported;
       sscreen->b.get_dmabuf_modifier_planes = si_get_dmabuf_modifier_planes;
    }
-#endif
 }
 
 void si_init_context_texture_functions(struct si_context *sctx)

@@ -24,7 +24,6 @@ files_libradeonsi = files(
   'si_get.c',
   'si_pipe.c',
   'si_pipe.h',
-  'si_texture.c',
   'si_uvd.c',
   'radeon_vcn.h',
   'radeon_vcn.c',
@@ -34,7 +33,11 @@ files_libradeonsi = files(
   'radeon_video.c',
   'radeon_video.h',
 )
-if not with_amd_decode_only
+if with_amd_decode_only
+  files_libradeonsi += files(
+    'si_texture_decode.c',
+  )
+else
   files_libradeonsi += files(
     'driinfo_radeonsi.h',
     'gfx11_query.c',
@@ -58,6 +61,7 @@ if not with_amd_decode_only
     'si_public.h',
     'si_query.c',
     'si_query.h',
+    'si_texture.c',
     'si_nir_clamp_shadow_comparison_value.c',
     'si_nir_kill_outputs.c',
     'si_nir_lower_abi.c',
