@@ -421,9 +421,10 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
          return false;
 
       switch (codec) {
-#ifndef AMD_DECODE_ONLY
+#if VIDEO_CODEC_MPEG12DEC
       case PIPE_VIDEO_FORMAT_MPEG12:
          return !(sscreen->info.vcn_ip_version >= VCN_3_0_33 || profile == PIPE_VIDEO_PROFILE_MPEG1);
+#endif
       case PIPE_VIDEO_FORMAT_MPEG4_AVC:
          if ((sscreen->info.family == CHIP_POLARIS10 || sscreen->info.family == CHIP_POLARIS11) &&
              sscreen->info.uvd_fw_version < UVD_FW_1_66_16) {
@@ -431,7 +432,7 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
             return false;
          }
          return fully_supported_profile;
-#ifndef AMD_DECODE_ONLY
+#if VIDEO_CODEC_VC1DEC
       case PIPE_VIDEO_FORMAT_VC1:
          return !(sscreen->info.vcn_ip_version >= VCN_3_0_33);
 #endif
@@ -519,12 +520,14 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
          return sscreen->info.dec_caps.codec_info[codec - 1].max_level;
       } else {
          switch (profile) {
-#ifndef AMD_DECODE_ONLY            
+#if VIDEO_CODEC_MPEG12DEC
          case PIPE_VIDEO_PROFILE_MPEG1:
             return 0;
          case PIPE_VIDEO_PROFILE_MPEG2_SIMPLE:
          case PIPE_VIDEO_PROFILE_MPEG2_MAIN:
             return 3;
+#endif
+#if VIDEO_CODEC_VC1DEC
          case PIPE_VIDEO_PROFILE_VC1_SIMPLE:
             return 1;
          case PIPE_VIDEO_PROFILE_VC1_MAIN:
