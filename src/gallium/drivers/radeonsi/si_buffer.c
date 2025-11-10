@@ -783,7 +783,7 @@ static bool si_resource_commit(struct pipe_context *pctx, struct pipe_resource *
 {
    struct si_context *ctx = (struct si_context *)pctx;
    struct si_resource *res = si_resource(resource);
-
+#ifndef AMD_DECODE_ONLY
    /*
     * Since buffer commitment changes cannot be pipelined, we need to
     * (a) flush any pending commands that refer to the buffer we're about
@@ -795,12 +795,17 @@ static bool si_resource_commit(struct pipe_context *pctx, struct pipe_resource *
        ctx->ws->cs_is_buffer_referenced(&ctx->gfx_cs, res->buf, RADEON_USAGE_READWRITE)) {
       si_flush_gfx_cs(ctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
    }
+#endif
    ctx->ws->cs_sync_flush(&ctx->gfx_cs);
 
    if (resource->target == PIPE_BUFFER)
       return si_buffer_commit(ctx, res, box, commit);
    else
+#ifndef AMD_DECODE_ONLY
       return si_texture_commit(ctx, res, level, box, commit);
+#else
+      return false;
+#endif
 }
 
 static uint64_t si_resource_get_address(struct pipe_screen *screen,

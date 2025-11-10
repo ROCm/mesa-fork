@@ -1635,10 +1635,10 @@ struct pipe_fence_handle *si_create_fence(struct pipe_context *ctx,
 
 /* si_get.c */
 void si_init_screen_get_functions(struct si_screen *sscreen);
+void si_init_screen_caps(struct si_screen *sscreen);
 #ifndef AMD_DECODE_ONLY
 void si_init_shader_caps(struct si_screen *sscreen);
 void si_init_compute_caps(struct si_screen *sscreen);
-void si_init_screen_caps(struct si_screen *sscreen);
 
 bool si_sdma_copy_image(struct si_context *ctx, struct si_texture *dst, struct si_texture *src);
 #endif

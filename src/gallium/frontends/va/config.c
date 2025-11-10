@@ -77,9 +77,7 @@ vlVaQueryConfigEntrypoints(VADriverContextP ctx, VAProfile profile,
 {
    struct pipe_screen *pscreen;
    enum pipe_video_profile p;
-#if VIDEO_CODEC_AV1ENC
    bool check_av1enc_support = false;
-#endif
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -101,15 +99,13 @@ vlVaQueryConfigEntrypoints(VADriverContextP ctx, VAProfile profile,
    if (vl_codec_supported(pscreen, p, false))
       entrypoint_list[(*num_entrypoints)++] = VAEntrypointVLD;
 
-#if VIDEO_CODEC_AV1ENC
-#if VA_CHECK_VERSION(1, 16, 0)
+#if VIDEO_CODEC_AV1ENC && VA_CHECK_VERSION(1, 16, 0)
    if (p == PIPE_VIDEO_PROFILE_AV1_MAIN)
       check_av1enc_support = true;
 #endif
    if (p != PIPE_VIDEO_PROFILE_AV1_MAIN || check_av1enc_support == true)
       if (vl_codec_supported(pscreen, p, true))
          entrypoint_list[(*num_entrypoints)++] = VAEntrypointEncSlice;
-#endif
 
    if (*num_entrypoints == 0)
       return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
@@ -691,9 +687,6 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
       config->entrypoint = PIPE_VIDEO_ENTRYPOINT_BITSTREAM;
       break;
    case VAEntrypointEncSlice:
-#ifndef VA_ENCODER
-      return VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
-#else
       if (!vl_codec_supported(pscreen, p, true)) {
          FREE(config);
          if (!vl_codec_supported(pscreen, p, false))
@@ -703,7 +696,6 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
       }
       config->entrypoint = PIPE_VIDEO_ENTRYPOINT_ENCODE;
       break;
-#endif
    default:
       FREE(config);
       if (!vl_codec_supported(pscreen, p, false) &&

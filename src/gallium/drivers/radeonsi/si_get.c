@@ -978,11 +978,13 @@ void si_init_compute_caps(struct si_screen *sscreen)
 
    caps->max_variable_threads_per_block = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
 }
+#endif
 
 void si_init_screen_caps(struct si_screen *sscreen)
 {
    struct pipe_caps *caps = (struct pipe_caps *)&sscreen->b.caps;
 
+#ifndef AMD_DECODE_ONLY
    u_init_pipe_screen_caps(&sscreen->b, 1);
 
    /* Gfx8 (Polaris11) hangs, so don't enable this on Gfx8 and older chips. */
@@ -1230,9 +1232,10 @@ void si_init_screen_caps(struct si_screen *sscreen)
    caps->max_geometry_total_output_components = 4095;
 
    caps->max_vertex_attrib_stride = 2048;
-
+#endif
    /* TODO: Gfx12 supports 64K textures, but Gallium can't represent them at the moment. */
    caps->max_texture_2d_size = sscreen->info.gfx_level >= GFX12 ? 32768 : 16384;
+#ifndef AMD_DECODE_ONLY
    caps->max_texture_cube_levels = sscreen->info.has_3d_cube_border_color_mipmap ?
       (sscreen->info.gfx_level >= GFX12 ? 16 : 15) /* 32K : 16K */ : 0;
    caps->max_texture_3d_levels = sscreen->info.has_3d_cube_border_color_mipmap ?
@@ -1305,5 +1308,6 @@ void si_init_screen_caps(struct si_screen *sscreen)
 
    if (sscreen->ws->va_range)
       sscreen->ws->va_range(sscreen->ws, &caps->min_vma, &caps->max_vma);
+#endif
 }
-#endif //decode only
+

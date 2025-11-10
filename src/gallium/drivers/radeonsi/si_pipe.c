@@ -37,6 +37,9 @@
 #include "virtio/virtio-gpu/drm_hw.h"
 #endif
 
+#else
+void si_init_screen_state_functions(struct si_screen *sscreen);
+
 #endif //decode only
 
 #include <xf86drm.h>
@@ -1411,9 +1414,9 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
 #endif
    si_init_screen_buffer_functions(sscreen);
    si_init_screen_texture_functions(sscreen);
+   si_init_screen_state_functions(sscreen);
 #ifndef AMD_DECODE_ONLY
    si_init_screen_fence_functions(sscreen);
-   si_init_screen_state_functions(sscreen);
    si_init_screen_query_functions(sscreen);
    si_init_screen_live_shader_cache(sscreen);
 
@@ -1439,9 +1442,10 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
        sscreen->info.me_fw_version >= 173) ||
       (sscreen->info.gfx_level == GFX6 && sscreen->info.pfp_fw_version >= 79 &&
        sscreen->info.me_fw_version >= 142);
-#endif //decode
+#endif
 
    si_init_screen_get_functions(sscreen);
+   si_init_screen_caps(sscreen);
 #ifndef AMD_DECODE_ONLY
    si_init_shader_caps(sscreen);
    si_init_compute_caps(sscreen);

@@ -25,6 +25,7 @@ files_libradeonsi = files(
   'si_pipe.c',
   'si_pipe.h',
   'si_uvd.c',
+  'si_state.h',
   'radeon_vcn.h',
   'radeon_vcn.c',
   'radeon_vcn_dec.c',
@@ -36,6 +37,7 @@ files_libradeonsi = files(
 if with_amd_decode_only
   files_libradeonsi += files(
     'si_texture_decode.c',
+    'si_state_decode.c',
   )
 else
   files_libradeonsi += files(
@@ -170,6 +172,16 @@ endforeach
 endif
 
 libradeonsi_cflags = []
+
+if with_amd_decode_only
+  libradeonsi_cflags += ['-DRADEONSI_DECODE_ONLY']
+else
+  libradeonsi_cflags += [
+    '-DRADEONSI_ENCODE',
+    '-DRADEONSI_POSTPROC',
+    '-DRADEONSI_DEBUG']
+endif
+
 if with_amdgpu_virtio
   libradeonsi_cflags += ['-DHAVE_AMDGPU_VIRTIO']
 endif
