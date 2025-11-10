@@ -81,13 +81,17 @@ pipe_reference_described(struct pipe_reference *dst,
       if (src) {
          ASSERTED int64_t count = p_atomic_inc_return(&src->count);
          assert(count != 1); /* src had to be referenced */
+#ifndef AMD_DECODE_ONLY
          debug_reference(src, get_desc, 1);
+#endif
       }
 
       if (dst) {
          int64_t count = p_atomic_dec_return(&dst->count);
          assert(count != -1); /* dst had to be referenced */
+#ifndef AMD_DECODE_ONLY
          debug_reference(dst, get_desc, -1);
+#endif
          if (!count)
             return true;
       }
@@ -131,8 +135,12 @@ static inline bool
 pipe_reference(struct pipe_reference *dst, struct pipe_reference *src)
 {
    return pipe_reference_described(dst, src,
+#ifndef AMD_DECODE_ONLY
                                    (debug_reference_descriptor)
                                    debug_describe_reference);
+#else
+                                   NULL);
+#endif
 }
 
 static inline void
@@ -178,8 +186,12 @@ pipe_resource_destroy(struct pipe_resource *res)
       res = next;
    } while (pipe_reference_described(res ? &res->reference : NULL,
                                      NULL,
+#ifndef AMD_DECODE_ONLY
                                      (debug_reference_descriptor)
                                      debug_describe_resource));
+#else
+                                     NULL));
+#endif
 }
 
 static inline void
@@ -189,8 +201,12 @@ pipe_resource_reference(struct pipe_resource **dst, struct pipe_resource *src)
 
    if (pipe_reference_described(old_dst ? &old_dst->reference : NULL,
                                 src ? &src->reference : NULL,
+#ifndef AMD_DECODE_ONLY
                                 (debug_reference_descriptor)
                                 debug_describe_resource)) {
+#else
+                                NULL)) {
+#endif
       pipe_resource_destroy(old_dst);
    }
    *dst = src;
