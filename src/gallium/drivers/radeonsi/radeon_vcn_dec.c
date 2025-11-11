@@ -1977,13 +1977,11 @@ static void rvcn_dec_sq_tail(struct radeon_decoder *dec)
 static int flush(struct radeon_decoder *dec, unsigned flags,
                  struct pipe_fence_handle **fence)
 {
-#ifndef AMD_DECODE_ONLY
-   struct si_screen *sscreen = (struct si_screen *)dec->screen;
-#endif
-
    rvcn_dec_sq_tail(dec);
 
-#ifndef AMD_DECODE_ONLY
+#if MESA_DEBUG
+   struct si_screen *sscreen = (struct si_screen *)dec->screen;
+
    if (sscreen->debug_flags & DBG(IB)) {
       struct ac_ib_parser ib_parser = {
          .f = stderr,

@@ -1180,6 +1180,7 @@ static void print_vcn_preencode_input_picture(FILE *f, struct ac_ib_parser *ib, 
    fprintf(f, "%s blue offset = %u\n", prefix, b_offset);
 }
 
+#if AMD_VIDEO_ENCODE
 static void parse_vcn_enc_ib(FILE *f, struct ac_ib_parser *ib)
 {
    rvcn_enc_cmd_t cmd = { 0 };
@@ -1929,6 +1930,7 @@ static void parse_vcn_enc_ib(FILE *f, struct ac_ib_parser *ib)
       print_vcn_unrecognized_params(f, ib, start_dw, size);
    }
 }
+#endif
 
 static void parse_vcn_ib(FILE *f, struct ac_ib_parser *ib)
 {
@@ -2106,16 +2108,20 @@ static void parse_vcn_ib(FILE *f, struct ac_ib_parser *ib)
          }
          print_vcn_unrecognized_params(f, ib, start_dw, size);
 
+#if AMD_VIDEO_ENCODE
          if (engine == RADEON_VCN_ENGINE_TYPE_ENCODE) {
             parse_vcn_enc_ib(f, ib);
             return;
          }
+#endif
       }
    } else {
+#if AMD_VIDEO_ENCODE
       if (ib->ip_type == AMD_IP_VCN_ENC) {
          parse_vcn_enc_ib(f, ib);
          return;
       }
+#endif
    }
 }
 

@@ -66,6 +66,14 @@ amd_common_files = files(
   'ac_uvd_dec.c',
 )
 
+if with_mesa_debug
+  amd_common_files += files(
+    'ac_debug.c',
+    'ac_debug.h',
+    'ac_parse_ib.c',
+  )
+endif
+
 if not with_amd_decode_only
   amd_common_files += files(
     'ac_binary.c',
@@ -76,14 +84,11 @@ if not with_amd_decode_only
     'ac_cmdbuf_cp.h',
     'ac_cmdbuf_sdma.c',
     'ac_cmdbuf_sdma.h',
-    'ac_debug.c',
-    'ac_debug.h',
     'ac_descriptors.c',
     'ac_descriptors.h',
     'ac_gather_context_rolls.c',
     'ac_msgpack.c',
     'ac_msgpack.h',
-    'ac_parse_ib.c',
     'ac_perfcounter.c',
     'ac_perfcounter.h',
     'ac_pm4.c',
@@ -144,6 +149,11 @@ endif
 
 link_with = []
 c_args = ['-DADDR_FASTCALL=']
+
+if not with_amd_decode_only
+  c_args += ['-DAMD_VIDEO_ENCODE']
+endif
+
 if with_amdgpu_virtio
   c_args += ['-DHAVE_AMDGPU_VIRTIO', '-DENABLE_DRM_AMDGPU']
   amd_common_files += files(

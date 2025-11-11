@@ -95,6 +95,13 @@ else
   files_mesa_util += files('cache_ops_null.c')
 endif
 
+if with_mesa_debug
+  files_mesa_util += files(
+    'memstream.c',
+    'memstream.h',
+  )
+endif
+
 if not with_amd_decode_only
   subdir('blake3')
 
@@ -141,8 +148,6 @@ if not with_amd_decode_only
     'list.h',
     'lut.c',
     'macros.h',
-    'memstream.c',
-    'memstream.h',
     'mesa-blake3.c',
     'mesa-blake3.h',
     'os_drm.h',
