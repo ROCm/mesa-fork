@@ -42,6 +42,10 @@ bool vl_codec_supported(struct pipe_screen *screen,
          return false;
       }
    }
+   if (profile == PIPE_VIDEO_PROFILE_JPEG_BASELINE) {
+      if (!VIDEO_CODEC_JPEGDEC)
+         return false;
+   }
    if (profile == PIPE_VIDEO_PROFILE_VP9_PROFILE0 ||
        profile == PIPE_VIDEO_PROFILE_VP9_PROFILE2) {
       if (!VIDEO_CODEC_VP9DEC)

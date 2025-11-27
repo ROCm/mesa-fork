@@ -413,7 +413,7 @@ endif
 
 _codecs = get_option('video-codecs')
 patent_codecs = ['vc1dec', 'h264dec', 'h264enc', 'h265dec', 'h265enc']
-free_codecs = ['av1dec', 'av1enc', 'vp9dec']
+free_codecs = ['av1dec', 'av1enc', 'vp9dec', 'jpegdec']
 all_codecs = patent_codecs + free_codecs
 
 if _codecs.contains('all')

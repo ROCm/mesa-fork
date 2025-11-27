@@ -719,7 +719,8 @@ option(
   type : 'array',
   value : ['all_free'],
   choices: [
-    'all', 'all_free', 'vc1dec', 'h264dec', 'h264enc', 'h265dec', 'h265enc', 'av1dec', 'av1enc', 'vp9dec'
+    'all', 'all_free', 'vc1dec', 'h264dec', 'h264enc', 'h265dec', 'h265enc',
+    'av1dec', 'av1enc', 'vp9dec', 'jpegdec'
   ],
   description : 'List of codecs to build support for. ' +
                 'Distros might want to consult their legal department before ' +
