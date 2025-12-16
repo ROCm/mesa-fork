@@ -32,7 +32,7 @@
 #include "util/u_handle_table.h"
 #include "util/u_transfer.h"
 #include "util/set.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "va_private.h"
 

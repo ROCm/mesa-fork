@@ -34,7 +34,7 @@
 #include "util/u_video.h"
 #include "util/u_process.h"
 
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 #include "vl/vl_video_buffer.h"
 
 #include "va_private.h"

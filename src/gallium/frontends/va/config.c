@@ -31,7 +31,7 @@
 #include "util/u_video.h"
 #include "util/u_memory.h"
 
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 #include "vl/vl_codec.h"
 
 #include "va_private.h"

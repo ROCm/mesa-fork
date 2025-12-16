@@ -48,7 +48,7 @@
 #include "util/u_inlines.h"
 
 #include "vl/vl_compositor.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "drm-uapi/drm_fourcc.h"
 

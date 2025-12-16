@@ -29,11 +29,11 @@
 #include <xf86drm.h>
 
 #include "pipe/p_screen.h"
-#include "pipe-loader/pipe_loader.h"
+#include "../../pipe-loader/pipe_loader.h"
 #include "util/os_file.h"
 #include "util/driconf.h"
 #include "util/u_memory.h"
-#include "vl/winsys/vl_winsys.h"
+#include "vl_winsys.h"
 
 #include "si_public.h"
 

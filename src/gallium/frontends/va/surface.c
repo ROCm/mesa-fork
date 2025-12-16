@@ -39,7 +39,7 @@
 
 #include "vl/vl_compositor.h"
 #include "vl/vl_video_buffer.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "va_private.h"
 

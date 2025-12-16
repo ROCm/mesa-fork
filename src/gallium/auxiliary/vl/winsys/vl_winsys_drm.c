@@ -32,7 +32,7 @@
 #include "frontend/drm_driver.h"
 
 #include "util/u_memory.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "loader.h"
 

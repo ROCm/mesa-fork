@@ -215,6 +215,10 @@ if with_glx == 'xlib'
   subdir('frontends/glx/xlib')
   subdir('targets/libgl-xlib')
 endif
+
+if with_gallium_va or with_gallium_mediafoundation
+  subdir('auxiliary/vl/winsys')
+endif
 if with_gallium_va
   subdir('frontends/va')
   if not with_dri
@@ -225,6 +229,7 @@ if with_gallium_mediafoundation
   subdir('frontends/mediafoundation')
   subdir('targets/mediafoundation')
 endif
+
 if with_dri
   subdir('frontends/dri')
   subdir('targets/dri')

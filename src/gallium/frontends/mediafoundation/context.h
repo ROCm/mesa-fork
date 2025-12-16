@@ -25,7 +25,7 @@
 
 #include <Unknwn.h>
 #include "util/u_inlines.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 #include "macros.h"
 #include "mfpipeinterop.h"
 #include "reference_frames_tracker.h"

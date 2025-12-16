@@ -28,7 +28,7 @@
 #include "gallium/include/frontend/sw_winsys.h"
 #include "gallium/winsys/sw/null/null_sw_winsys.h"
 #include "util/u_video.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include <unknwn.h>
 #include <windows.h>

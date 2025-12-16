@@ -27,7 +27,7 @@
 #include "pipe-loader/pipe_loader.h"
 #include "pipe/p_screen.h"
 #include "util/u_memory.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 #include "loader.h"
 #include "pipe-loader/pipe_loader.h"
 #include "vl/vl_compositor.h"

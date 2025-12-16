@@ -24,7 +24,7 @@
 
 #define UNICODE
 #include "util/u_video.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 #include "pipe_headers.h"
 
 #include <directx/d3d12.h>

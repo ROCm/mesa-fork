@@ -24,7 +24,7 @@
 #include "pipe/p_screen.h"
 
 #include "util/u_memory.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "gallium/winsys/sw/gdi/gdi_sw_winsys.h"
 #include "gallium/drivers/d3d12/d3d12_public.h"

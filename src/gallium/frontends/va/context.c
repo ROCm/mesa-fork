@@ -33,7 +33,7 @@
 #include "util/u_video.h"
 #include "util/set.h"
 #include "vl/vl_deint_filter.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "va_private.h"
 #ifdef HAVE_DRISW_KMS

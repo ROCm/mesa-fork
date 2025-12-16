@@ -24,7 +24,7 @@
 #include "util/u_video.h"
 #include "vl/vl_defines.h"
 #include "vl/vl_video_buffer.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 #include "pipe_headers.h"
 
 #include <codecapi.h>

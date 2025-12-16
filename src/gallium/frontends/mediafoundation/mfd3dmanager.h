@@ -27,7 +27,7 @@
 #include "gallium/include/frontend/sw_winsys.h"
 #include "gallium/winsys/sw/null/null_sw_winsys.h"
 #include "util/u_video.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 // directx/xxx has the latest headers from DirectX-Headers dependency
 // and must be included _before_ any Windows SDK headers (e.g d3d11.h, etc)

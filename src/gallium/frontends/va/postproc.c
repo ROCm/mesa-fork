@@ -31,7 +31,7 @@
 #include "vl/vl_defines.h"
 #include "vl/vl_video_buffer.h"
 #include "vl/vl_deint_filter.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "va_private.h"
 

@@ -25,7 +25,7 @@
 #include "pipe/p_screen.h"
 
 #include "util/u_memory.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 

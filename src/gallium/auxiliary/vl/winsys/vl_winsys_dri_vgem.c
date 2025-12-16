@@ -24,7 +24,7 @@
 #include "pipe/p_screen.h"
 
 #include "util/u_memory.h"
-#include "vl/vl_winsys.h"
+#include "vl/winsys/vl_winsys.h"
 
 #include "target-helpers/sw_helper_public.h"
 #include "gallium/winsys/sw/kms-dri/kms_dri_sw_winsys.h"
