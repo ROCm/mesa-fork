@@ -57,6 +57,11 @@ bool vl_codec_supported(struct pipe_screen *screen,
       if (!VIDEO_CODEC_VC1DEC)
          return false;
    }
+   if (profile >= PIPE_VIDEO_PROFILE_MPEG1 &&
+       profile <= PIPE_VIDEO_PROFILE_MPEG2_SIMPLE) {
+      if (!VIDEO_CODEC_MPEG12DEC)
+         return false;
+   }
    if (profile >= PIPE_VIDEO_PROFILE_MPEG4_AVC_BASELINE &&
        profile <= PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH444) {
       if (encode) {
