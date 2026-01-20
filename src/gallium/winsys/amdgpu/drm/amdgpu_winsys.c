@@ -391,9 +391,12 @@ amdgpu_drm_winsys_get_fd(struct radeon_winsys *rws)
    return sws->fd;
 }
 
-PUBLIC struct radeon_winsys *
+#if HAVE_PIPELOADER
+PUBLIC
+#endif
+struct radeon_winsys *
 amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
-		     radeon_screen_create_t screen_create, bool is_virtio)
+		               radeon_screen_create_t screen_create, bool is_virtio)
 {
    struct amdgpu_screen_winsys *sws;
    struct amdgpu_winsys *aws;

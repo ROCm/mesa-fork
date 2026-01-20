@@ -5,6 +5,23 @@ c_args = []
 if with_amdgpu_virtio
   c_args += '-DHAVE_AMDGPU_VIRTIO'
 endif
+if get_option('pipe-loader') == 'auto'
+  c_args += '-DHAVE_PIPELOADER'
+endif
+
+libamdgpuwinsys_inc = [
+  inc_amd, inc_gallium, inc_gallium_aux, inc_include, inc_src,
+  inc_amd_common
+]
+
+libamdgpuwinsys_dep = [dep_libdrm_amdgpu, idep_amdgfxregs_h, idep_mesautil]
+
+if not with_amd_decode_only
+  libamdgpuwinsys_inc += [
+    inc_amd_common_llvm, inc_virtio_gpu
+  ]
+  libamdgpuwinsys_dep += [dep_llvm]
+endif
 
 libamdgpuwinsys = static_library(
   'amdgpuwinsys',

@@ -1,6 +1,14 @@
 # Copyright © 2017-2019 Intel Corporation
 # SPDX-License-Identifier: MIT
 
+option(  
+  'pipe-loader',
+  type : 'combo',
+  value : 'auto',
+  choices : ['auto', 'amdgpu'],
+  description : 'Build pipe loader support based on the platform option or a predefined value'
+)
+
 option(
   'amd-decode-only',
   type : 'boolean',

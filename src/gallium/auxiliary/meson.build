@@ -348,79 +348,7 @@ if not with_amd_decode_only
     'vl/vl_video_buffer.c',
     'vl/vl_video_buffer.h',
   )
-
-  vlwinsys_deps = []
-  files_libgalliumvlwinsys = files('vl/vl_winsys.h')
-  links_libgalliumvlwinsys = []
-  if host_machine.system() == 'windows'
-    files_libgalliumvlwinsys += files('vl/vl_winsys_win32.c')
-  else
-    files_libgalliumvlwinsys += files('vl/vl_winsys_drm.c')
-  endif
-  if with_platform_x11
-    files_libgalliumvlwinsys += files('vl/vl_winsys_dri.c')
-    links_libgalliumvlwinsys += libloader_x11
-    if with_dri_platform == 'drm'
-      vlwinsys_deps += [
-        dep_xcb_sync, dep_xcb_present, dep_xshmfence, dep_xcb_xfixes,
-        dep_xcb_dri3,
-      ]
-      files_libgalliumvlwinsys += files('vl/vl_winsys_dri3.c')
-    endif
-  endif
-  if with_gallium_zink
-    files_libgalliumvlwinsys += files('vl/vl_winsys_kopper.c')
-  endif
-
-  if with_glx == 'xlib'
-    files_libgalliumvlwinsys += files('vl/vl_winsys_xlib_swrast.c')
-  elif with_gallium_drisw_kms
-    files_libgalliumvlwinsys += files('vl/vl_winsys_dri_vgem.c')
-  endif
-
-  prog_enums2names = files('driver_trace/enums2names.py')
-  files_libgallium += custom_target(
-    'tr_util.[ch]',
-    input: ['../include/pipe/p_defines.h', '../include/pipe/p_video_enums.h', '../../util/blend.h'],
-    output: ['tr_util.c', 'tr_util.h'],
-    command: [prog_python, prog_enums2names, '@INPUT@', '-C', '@OUTPUT0@', '-H', '@OUTPUT1@'],
-    depend_files: prog_enums2names,
-  )
-
-  files_libgallium += custom_target(
-    'u_tracepoints.c',
-    input: 'util/u_tracepoints.py',
-    output: 'u_tracepoints.c',
-    command: [
-      prog_python, '@INPUT@',
-      '-p', join_paths(dir_source_root, 'src/util/perf/'),
-      '-C', '@OUTPUT@',
-    ],
-    depend_files: u_trace_py,
-  )
-
-  files_u_tracepoints = custom_target(
-    'u_tracepoints.h',
-    input: 'util/u_tracepoints.py',
-    output: 'u_tracepoints.h',
-    command: [
-      prog_python, '@INPUT@',
-      '-p', join_paths(dir_source_root, 'src/util/perf/'),
-      '-H', '@OUTPUT@',
-    ],
-    depend_files: u_trace_py,
-  )
-
-  files_libgallium += files_u_tracepoints
-
-  idep_u_tracepoints = declare_dependency(
-    sources: files_u_tracepoints,
-  )
-else
-  inc_loader = []
-  idep_nir = null_dep
-  idep_nir_headers = null_dep
-endif # not with_amd_decode_only
+endif
 
 if dep_libdrm.found() and not with_amd_decode_only
   files_libgallium += files(
@@ -522,6 +450,106 @@ if draw_with_llvm
   endif
 endif
 
+files_libgalliumvl = files(
+  'vl/vl_codec.c',
+  'vl/vl_codec.h',
+  'vl/vl_compositor.c',
+  'vl/vl_compositor.h',
+  'vl/vl_compositor_gfx.c',
+  'vl/vl_compositor_gfx.h',
+  'vl/vl_compositor_cs.c',
+  'vl/vl_compositor_cs.h',
+  'vl/vl_csc.c',
+  'vl/vl_csc.h',
+  'vl/vl_defines.h',
+  'vl/vl_deint_filter.c',
+  'vl/vl_deint_filter.h',
+  'vl/vl_deint_filter_cs.c',
+  'vl/vl_deint_filter_cs.h',
+  'vl/vl_mpeg12_bitstream.c',
+  'vl/vl_mpeg12_bitstream.h',
+  'vl/vl_types.h',
+  'vl/vl_vertex_buffers.c',
+  'vl/vl_vertex_buffers.h',
+  'vl/vl_video_buffer.c',
+  'vl/vl_video_buffer.h',
+)
+
+amd_no_loader = false
+if get_option('pipe-loader') == 'amdgpu'
+  amd_no_loader = true
+endif
+
+vlwinsys_deps = []
+files_libgalliumvlwinsys = files('vl/vl_winsys.h')
+links_libgalliumvlwinsys = []
+if host_machine.system() == 'windows'
+  files_libgalliumvlwinsys += files('vl/vl_winsys_win32.c')
+elif amd_no_loader
+  files_libgalliumvlwinsys += files('vl/vl_winsys_amdgpu.c')
+else
+  files_libgalliumvlwinsys += files('vl/vl_winsys_drm.c')
+endif
+if with_platform_x11
+  files_libgalliumvlwinsys += files('vl/vl_winsys_dri.c')
+  links_libgalliumvlwinsys += libloader_x11
+  if with_dri_platform == 'drm'
+    vlwinsys_deps += [
+      dep_xcb_sync, dep_xcb_present, dep_xshmfence, dep_xcb_xfixes,
+      dep_xcb_dri3,
+    ]
+    files_libgalliumvlwinsys += files('vl/vl_winsys_dri3.c')
+  endif
+endif
+if with_gallium_zink
+  files_libgalliumvlwinsys += files('vl/vl_winsys_kopper.c')
+endif
+
+if with_glx == 'xlib'
+  files_libgalliumvlwinsys += files('vl/vl_winsys_xlib_swrast.c')
+elif with_gallium_drisw_kms
+  files_libgalliumvlwinsys += files('vl/vl_winsys_dri_vgem.c')
+endif
+
+prog_enums2names = files('driver_trace/enums2names.py')
+files_libgallium += custom_target(
+  'tr_util.[ch]',
+  input: ['../include/pipe/p_defines.h', '../include/pipe/p_video_enums.h', '../../util/blend.h'],
+  output: ['tr_util.c', 'tr_util.h'],
+  command: [prog_python, prog_enums2names, '@INPUT@', '-C', '@OUTPUT0@', '-H', '@OUTPUT1@'],
+  depend_files: prog_enums2names,
+)
+
+files_libgallium += custom_target(
+  'u_tracepoints.c',
+  input: 'util/u_tracepoints.py',
+  output: 'u_tracepoints.c',
+  command: [
+    prog_python, '@INPUT@',
+    '-p', join_paths(dir_source_root, 'src/util/perf/'),
+    '-C', '@OUTPUT@',
+  ],
+  depend_files: u_trace_py,
+)
+
+files_u_tracepoints = custom_target(
+  'u_tracepoints.h',
+  input: 'util/u_tracepoints.py',
+  output: 'u_tracepoints.h',
+  command: [
+    prog_python, '@INPUT@',
+    '-p', join_paths(dir_source_root, 'src/util/perf/'),
+    '-H', '@OUTPUT@',
+  ],
+  depend_files: u_trace_py,
+)
+
+files_libgallium += files_u_tracepoints
+
+idep_u_tracepoints = declare_dependency(
+  sources: files_u_tracepoints,
+)
+
 u_indices_gen_c = custom_target(
   'u_indices_gen.c',
   input : 'indices/u_indices_gen.py',
@@ -535,6 +563,10 @@ u_unfilled_gen_c = custom_target(
   output : 'u_unfilled_gen.c',
   command : [prog_python, '@INPUT@', '@OUTPUT@'],
 )
+
+if not is_variable('inc_loader')
+  inc_loader = ''
+endif
 
 libgallium_extra_c_args = []
 libgallium = static_library(
@@ -597,13 +629,16 @@ else
   libgalliumvl_stub = _libgalliumvl_stub
 endif
 
-inc_libgalliumvlwinsys = [inc_loader, inc_gallium, inc_include, inc_src]
-if with_amd_decode_only
+inc_libgalliumvlwinsys = [inc_gallium, inc_include, inc_src]
+
+if is_variable('inc_loader')
+  inc_libgalliumvlwinsys += inc_loader
+endif
+
+if amd_no_loader
   inc_libgalliumvlwinsys += include_directories('../drivers/radeonsi')
   vlwinsys_deps = null_dep
   links_libgalliumvlwinsys = libradeonsi
-  files_libgalliumvlwinsys = files('vl/vl_winsys.h')
-  files_libgalliumvlwinsys += files('vl/vl_winsys_drm.c')
 else
   inc_libgalliumvlwinsys += include_directories('../drivers/zink')
 endif
