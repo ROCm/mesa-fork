@@ -5,7 +5,7 @@ c_args = []
 if with_amdgpu_virtio
   c_args += '-DHAVE_AMDGPU_VIRTIO'
 endif
-if get_option('pipe-loader') == 'auto'
+if (get_option('pipe-loader') == 'auto' and not with_amd_decode_only)
   c_args += '-DHAVE_PIPELOADER'
 endif
 

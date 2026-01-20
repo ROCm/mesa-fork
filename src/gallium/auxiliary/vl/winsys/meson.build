@@ -3,7 +3,7 @@ files_libgalliumvlwinsys = files('vl_winsys.h')
 links_libgalliumvlwinsys = []
 
 amd_no_loader = false
-if get_option('pipe-loader') == 'amdgpu'
+if (get_option('pipe-loader') == 'amdgpu') or with_amd_decode_only
   amd_no_loader = true
 endif
 

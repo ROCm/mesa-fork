@@ -18,6 +18,10 @@ project(
 )
 
 with_amd_decode_only = get_option('amd-decode-only')
+with_shaders = true
+if with_amd_decode_only
+  with_shaders = false
+endif
 
 if host_machine.system() == 'darwin'
   add_languages('objc', native : false)
