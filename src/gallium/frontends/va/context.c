@@ -111,7 +111,7 @@ static struct VADriverVTable vtable =
    &vlVaMapBuffer2,
 #endif
 };
-
+#ifndef AMD_DECODE_ONLY
 static struct VADriverVTableVPP vtable_vpp =
 {
    1,
@@ -119,7 +119,7 @@ static struct VADriverVTableVPP vtable_vpp =
    &vlVaQueryVideoProcFilterCaps,
    &vlVaQueryVideoProcPipelineCaps
 };
-
+#endif
 VA_PUBLIC_API VAStatus
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 {
@@ -148,6 +148,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
       break;
    }
 #else
+#ifndef AMD_DECODE_ONLY
    case VA_DISPLAY_ANDROID:
       FREE(drv);
       return VA_STATUS_ERROR_UNIMPLEMENTED;
@@ -162,6 +163,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
       if (!drv->vscreen)
          drv->vscreen = vl_xlib_swrast_screen_create(ctx->native_dpy, ctx->x11_screen);
       break;
+#endif
    case VA_DISPLAY_WAYLAND:
    case VA_DISPLAY_DRM:
    case VA_DISPLAY_DRM_RENDERNODES: {
@@ -179,6 +181,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
          FREE(drm_driver_name);
       }
 #endif
+
       if(!drv->vscreen) {
          /* VA_DISPLAY_WAYLAND uses the compositor's fd, like VA_DISPLAY_X11 does.
           * In this case, tell vl_drm_screen_create to consider the DRI_PRIME env
@@ -213,23 +216,25 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    if (!drv->htab)
       goto error_htab;
 
+#ifndef AMD_DECODE_ONLY
    bool can_init_compositor = drv->vscreen->pscreen->caps.graphics ||
                               drv->vscreen->pscreen->caps.compute;
-
    if (can_init_compositor) {
       if (!vl_compositor_init(&drv->compositor, drv->pipe, compute_only))
          goto error_compositor;
       if (!vl_compositor_init_state(&drv->cstate, drv->pipe))
          goto error_compositor_state;
    }
-
+#endif
    (void) mtx_init(&drv->mutex, mtx_plain);
 
    ctx->pDriverData = (void *)drv;
    ctx->version_major = 0;
    ctx->version_minor = 1;
    *ctx->vtable = vtable;
+#ifndef AMD_DECODE_ONLY
    *ctx->vtable_vpp = vtable_vpp;
+#endif
    ctx->max_profiles = PIPE_VIDEO_PROFILE_MAX - PIPE_VIDEO_PROFILE_UNKNOWN - 1;
    ctx->max_entrypoints = 2;
    ctx->max_attributes = 1;
@@ -247,7 +252,8 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    ctx->str_vendor = drv->vendor_string;
 
    return VA_STATUS_SUCCESS;
-
+   
+#ifndef AMD_DECODE_ONLY
 error_compositor_state:
    if (can_init_compositor)
       vl_compositor_cleanup(&drv->compositor);
@@ -255,6 +261,7 @@ error_compositor_state:
 error_compositor:
    handle_table_destroy(drv->htab);
 
+#endif
 error_htab:
    drv->pipe->destroy(drv->pipe);
 
@@ -537,10 +544,13 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
       }
       context->decoder->destroy(context->decoder);
    }
+
+#ifndef AMD_DECODE_ONLY
    if (context->deint) {
       vl_deint_filter_cleanup(context->deint);
       FREE(context->deint);
    }
+#endif   
    mtx_unlock(&context->mutex);
    mtx_destroy(&context->mutex);
    FREE(context->desc.base.decrypt_key);
@@ -562,8 +572,10 @@ vlVaTerminate(VADriverContextP ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = ctx->pDriverData;
+#ifndef AMD_DECODE_ONLY
    vl_compositor_cleanup_state(&drv->cstate);
    vl_compositor_cleanup(&drv->compositor);
+#endif
    if (drv->pipe2)
       drv->pipe2->destroy(drv->pipe2);
    drv->pipe->destroy(drv->pipe);

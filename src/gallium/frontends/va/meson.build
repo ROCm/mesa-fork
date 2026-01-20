@@ -3,9 +3,14 @@
 
 libva_files = files(
     'buffer.c', 'config.c', 'context.c', 'display.c',
-    'picture.c', 'surface.c', 'decode.c',
-    'image.c', 'postproc.c', 'subpicture.c'
+    'picture.c', 'surface.c', 'decode.c'
 )
+
+if not with_amd_decode_only
+  libva_files += files('image.c', 'postproc.c', 'subpicture.c')
+else
+  libva_files += files('decode_stub.c')
+endif
 
 if _codecs.contains('jpegdec')
   libva_files += files('picture_mjpeg.c')
