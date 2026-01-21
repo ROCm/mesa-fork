@@ -11,7 +11,7 @@
 #include "frontend/drm_driver.h"
 #include "util/format/u_format.h"
 #include "util/os_time.h"
-#include "util/u_log.h"
+// #include "util/u_log.h"
 #include "util/u_memory.h"
 #include "util/u_pack_color.h"
 #include "util/u_resource.h"

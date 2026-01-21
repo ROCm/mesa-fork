@@ -12,6 +12,7 @@
 #include "util/u_threaded_context.h"
 #if WITH_SHADERS
 #include "si_shader.h"
+#include "util/log.h"
 #include "util/u_blitter.h"
 #include "util/u_log.h"
 #include "util/u_suballoc.h"
@@ -22,8 +23,6 @@
 #include "ac_sqtt.h"
 #include "si_state.h"
 #include "ac_spm.h"
-#endif
-#if HAVE_PERFETTO
 #include "si_perfetto.h"
 #endif
 
@@ -48,14 +47,14 @@ struct ac_llvm_compiler;
 #define PIPE_FB_SURFACES
 
 typedef struct nir_shader nir_shader;
-typedef uint8_t blake3_hash;
+// typedef uint8_t blake3_hash;
 enum rgp_sqtt_marker_event_type { rgp_event };
 enum rgp_sqtt_marker_user_event_type { rgp_user_event };
 enum blitter_attrib_type { blitter_attrib };
 
 struct ac_cb_surface {};
 struct ac_ds_surface {};
-struct ac_tracked_regs {};
+// struct ac_tracked_regs {};
 struct ac_spm {};
 
 struct u_log_context {};
@@ -85,6 +84,8 @@ union si_state {
 union si_state_atoms {
    struct {};
 };
+
+#define mesa_loge(...)
 #endif
 
 #define SHADER_DEBUG_LOG 0
@@ -1899,8 +1900,6 @@ static inline void si_texture_reference(struct si_texture **ptr, struct si_textu
 
 #if WITH_SHADERS
 #include "si_pipe_inlines.h"
-#endif
-
 #endif
 
 #define PRINT_ERR(fmt, args...)                                                                    \

@@ -99,6 +99,9 @@ cpp_args = []
 
 if with_amd_decode_only
   pre_args += '-DAMD_DECODE_ONLY'
+  pre_args += '-DWITH_SHADERS=0'
+else
+  pre_args += '-DWITH_SHADERS=1'
 endif
 
 with_moltenvk_dir = get_option('moltenvk-dir')

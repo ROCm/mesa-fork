@@ -19,7 +19,7 @@
 #include "util/u_process.h"
 
 #include "ac_cmdbuf.h"
-#include "ac_descriptors.h"
+// #include "ac_descriptors.h"
 #include "ac_formats.h"
 #include "gfx10_format_table.h"
 

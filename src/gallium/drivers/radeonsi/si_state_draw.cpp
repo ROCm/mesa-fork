@@ -9,6 +9,7 @@
 #include "util/hash_table.h"
 #define XXH_INLINE_ALL
 #include "util/xxhash.h"
+#include "util/log.h"
 #include "util/u_cpu_detect.h"
 #include "util/u_index_modify.h"
 #include "util/u_prim.h"
