@@ -449,7 +449,7 @@ elif _codecs.contains('all_free')
 endif
 
 if with_amd_decode_only
-  _codecs = ['av1dec', 'vp9dec', 'h264dec', 'h265dec']
+  _codecs = ['jpegdec', 'av1dec', 'vp9dec', 'h264dec', 'h265dec']
 endif
 
 foreach c : all_codecs
