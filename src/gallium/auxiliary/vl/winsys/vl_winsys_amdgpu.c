@@ -141,11 +141,14 @@ vl_drm_screen_create(int fd, bool honor_dri_prime)
       const driOptionDescription radeonsi_driconf[] = {
          #include "driinfo_radeonsi.h"
       };
-      config.options = CALLOC_STRUCT(driOptionCache);
-      config.options_info = CALLOC_STRUCT(driOptionCache);
-      driParseOptionInfo((driOptionCache *)config.options_info, radeonsi_driconf, 
-         ARRAY_SIZE(radeonsi_driconf));
+      driOptionCache options_cache, options_info;
+      driParseOptionInfo(&options_info, radeonsi_driconf, 
+                         ARRAY_SIZE(radeonsi_driconf));
+      config.options = &options_cache;
+      config.options_info = &options_info;
       vscreen->pscreen = pipe_loader_drm_create_screen(vscreen->dev, &config, false);
+      driDestroyOptionCache(&options_cache);
+      driDestroyOptionInfo(&options_info);
    }
 
    if (libva_owned_fd >= 0 && libva_owned_fd != fd)

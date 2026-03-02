@@ -334,13 +334,14 @@ static void si_destroy_context(struct pipe_context *context)
 
    if (sctx->gfx_cs.priv)
       sctx->ws->cs_destroy(&sctx->gfx_cs);
-   if (sctx->ctx)
-      sctx->ws->ctx_destroy(sctx->ctx);
    if (sctx->sdma_cs) {
       sctx->ws->cs_destroy(sctx->sdma_cs);
       free(sctx->sdma_cs);
    }
-
+#endif
+   if (sctx->ctx)
+      sctx->ws->ctx_destroy(sctx->ctx);
+#ifndef AMD_DECODE_ONLY
    if (sctx->dirty_implicit_resources)
       _mesa_hash_table_destroy(sctx->dirty_implicit_resources,
                                decref_implicit_resource);
