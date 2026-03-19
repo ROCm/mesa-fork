@@ -437,17 +437,20 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
    context->surfaces = _mesa_set_create(NULL, _mesa_hash_pointer, _mesa_key_pointer_equal);
    context->buffers = _mesa_set_create(NULL, _mesa_hash_pointer, _mesa_key_pointer_equal);
 
+   mtx_lock(&drv->mutex);
+   *context_id = handle_table_add(drv->htab, context);
+   mtx_unlock(&drv->mutex);
+
    if (create_decoder) {
       mtx_lock(&drv->mutex);
       context->decoder = drv->pipe->create_video_codec(drv->pipe, &context->templat);
       mtx_unlock(&drv->mutex);
-      if (!context->decoder)
+      if (!context->decoder) {
+         vlVaDestroyContext(ctx, *context_id);
+         *context_id = VA_INVALID_ID;
          return VA_STATUS_ERROR_ALLOCATION_FAILED;
+      }
    }
-
-   mtx_lock(&drv->mutex);
-   *context_id = handle_table_add(drv->htab, context);
-   mtx_unlock(&drv->mutex);
 
    return VA_STATUS_SUCCESS;
 }
