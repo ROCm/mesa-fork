@@ -1128,15 +1128,12 @@ void si_destroy_screen(struct pipe_screen *pscreen)
    simple_mtx_destroy(&sscreen->tess_ring_lock);
 
    radeon_bo_reference(sscreen->ws, &sscreen->gds_oa, NULL);
-#endif //decode only
-
-   slab_destroy_parent(&sscreen->pool_transfers);
-#ifndef AMD_DECODE_ONLY
    disk_cache_destroy(sscreen->disk_shader_cache);
    util_live_shader_cache_deinit(&sscreen->live_shader_cache);
-   util_idalloc_mt_fini(&sscreen->buffer_ids);
    util_vertex_state_cache_deinit(&sscreen->vertex_state_cache);
 #endif //decode only
+   slab_destroy_parent(&sscreen->pool_transfers);
+   util_idalloc_mt_fini(&sscreen->buffer_ids);
    sscreen->ws->destroy(sscreen->ws);
 #ifndef AMD_DECODE_ONLY
    FREE(sscreen->use_aco_shader_blakes);
@@ -1413,9 +1410,9 @@ static struct pipe_screen *radeonsi_screen_create_impl(struct radeon_winsys *ws,
          return NULL;
       }
    }
-
-   util_idalloc_mt_init_tc(&sscreen->buffer_ids);
 #endif //decode only
+   util_idalloc_mt_init_tc(&sscreen->buffer_ids);
+
    /* Set functions first. */
    sscreen->b.context_create = si_pipe_create_context;
    sscreen->b.destroy = si_destroy_screen;
