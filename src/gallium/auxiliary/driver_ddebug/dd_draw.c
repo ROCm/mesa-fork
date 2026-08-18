@@ -150,7 +150,6 @@ dd_dump_dmesg(FILE *f)
 #endif
 }
 
-#if HAVE_GFX_COMPUTE
 static unsigned
 dd_num_active_viewports(struct dd_draw_state *dstate)
 {
@@ -174,7 +173,6 @@ dd_num_active_viewports(struct dd_draw_state *dstate)
 
    return 1;
 }
-#endif /* HAVE_GFX_COMPUTE */
 
 #define COLOR_RESET	"\033[0m"
 #define COLOR_SHADER	"\033[1;32m"
@@ -290,11 +288,7 @@ dd_dump_shader(struct dd_draw_state *dstate, mesa_shader_stage sh, FILE *f)
 
    if (sh == MESA_SHADER_FRAGMENT)
       if (dstate->rs) {
-#if HAVE_GFX_COMPUTE
          unsigned num_viewports = dd_num_active_viewports(dstate);
-#else
-         unsigned num_viewports = 1;
-#endif
 
          if (dstate->rs->state.rs.clip_plane_enable)
             DUMP(clip_state, &dstate->clip_state);
@@ -877,9 +871,7 @@ dd_unreference_copy_of_draw_state(struct dd_draw_state_copy *state)
 
    for (i = 0; i < MESA_SHADER_MESH_STAGES; i++) {
       if (dst->shaders[i])
-#if HAVE_GFX_COMPUTE
          tgsi_free_tokens(dst->shaders[i]->state.shader.tokens);
-#endif
 
       for (j = 0; j < PIPE_MAX_CONSTANT_BUFFERS; j++)
          pipe_resource_reference(&dst->constant_buffers[i][j].buffer, NULL);
@@ -926,12 +918,8 @@ dd_copy_draw_state(struct dd_draw_state *dst, struct dd_draw_state *src)
       if (src->shaders[i]) {
          dst->shaders[i]->state.shader = src->shaders[i]->state.shader;
          if (src->shaders[i]->state.shader.tokens) {
-#if HAVE_GFX_COMPUTE
             dst->shaders[i]->state.shader.tokens =
                tgsi_dup_tokens(src->shaders[i]->state.shader.tokens);
-#else
-            dst->shaders[i]->state.shader.tokens = NULL;
-#endif
          } else {
             dst->shaders[i]->state.shader.ir.nir = NULL;
          }

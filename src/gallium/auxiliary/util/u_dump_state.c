@@ -517,9 +517,7 @@ util_dump_shader_state(FILE *stream, const struct pipe_shader_state *state)
    if (state->type == PIPE_SHADER_IR_TGSI) {
       util_dump_member_begin(stream, "tokens");
       fprintf(stream, "\"\n");
-#if HAVE_GFX_COMPUTE
       tgsi_dump_to_file(state->tokens, 0, stream);
-#endif
       fprintf(stream, "\"");
       util_dump_member_end(stream);
    }
