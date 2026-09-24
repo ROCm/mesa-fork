@@ -67,3 +67,70 @@ regexes = [
   '''[A-Z][A-Z0-9_]*SHA512\s*[=:]''',
   '''[A-Z][A-Z0-9_]*MD5\s*[=:]''',
 ]
+
+# ---------------------------------------------------------------------------
+# `generic-api-key` fires on any high-entropy value sitting near a word like
+# "key", "token" or "api". A graphics driver tree is full of those words as
+# ordinary vocabulary -- pipeline cache keys, keyframes, `mdapi_group` -- so
+# the value next to them is almost always an identifier or an enum constant.
+#
+# The entries below anchor on the shape of the value, not on file paths, so a
+# real credential in the same files is still reported.
+# ---------------------------------------------------------------------------
+
+[[allowlists]]
+description = "Intel OA metric group taxonomy"
+# `src/intel/perf/oa-*.xml` tags each hardware counter with the pipeline
+# stage it measures: `mdapi_group="GPU/Rasterizer/Early Depth Test"`,
+# `mdapi_group="3D Pipe/Clipper"`. The attribute name carries "api", which
+# is what trips the rule; the value is a display label.
+#
+# Anchored on the attribute name alone: the rule's match stops at the first
+# space, so for a multi-word label it never reaches the closing quote.
+regexTarget = "match"
+regexes = [
+  '''\bmdapi_group="''',
+]
+
+[[allowlists]]
+description = "Upstream revision pins in CI container builds"
+# `.gitlab-ci/container/build-*.sh` pins each third-party checkout to a git
+# commit: `APITRACE_VERSION="18cfd388ac47a9e00978b34d6c20341f3e2cdb56"`,
+# consumed by `git checkout "$APITRACE_VERSION"`.
+#
+# A 40-character hex string is indistinguishable from a credential on its
+# own, so this matches the `*_VERSION` variable and the commit id together.
+regexTarget = "match"
+regexes = [
+  '''\b[A-Z][A-Z0-9_]*_VERSION\s*=\s*"[0-9a-f]{40}"''',
+]
+
+[[allowlists]]
+description = "C identifiers, enum constants and intrinsics"
+# `SVGA3D_B8G8R8X8_UNORM`, `ANV_MAX_H265_CTB_SIZE`, `_mm512_srli_epi64`.
+# At least one underscore is required and every segment is capped at 12
+# characters, so an unbroken token -- a hex digest, an access key id, the
+# random tail of a `ghp_`/`sk_live_` credential -- does not qualify.
+regexes = [
+  '''^_?[A-Za-z][A-Za-z0-9]{0,11}(?:_[A-Za-z0-9]{1,12}){1,5}$''',
+]
+
+[[allowlists]]
+description = "Dotted struct member paths"
+# Shader cache key fields read through a struct chain:
+# `key.vs.u32.decomposed_attrs`, `ps.mono.fbfetch_is_1D`.
+# Each segment must begin lowercase and stay under 24 characters, which a
+# JWT's base64 segments cannot satisfy.
+regexes = [
+  '''^[a-z][a-z0-9_]{0,23}(?:\.[a-z][A-Za-z0-9_]{0,23}){1,4}$''',
+]
+
+[[allowlists]]
+description = "TensorFlow Lite test models"
+# Compiled flatbuffer graphs used as teflon test input. They are binary, so
+# any run of bytes can read as high entropy and there is no value shape to
+# anchor on. Nothing here is hand-written, so a credential cannot be
+# committed into one as source.
+paths = [
+  '''(^|/)src/gallium/targets/teflon/tests/models/.*\.tflite$''',
+]
